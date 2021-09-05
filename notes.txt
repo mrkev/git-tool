@@ -1,0 +1,131 @@
+
+// https://stackoverflow.com/questions/3177836/how-to-format-time-since-xxx-e-g-4-minutes-ago-similar-to-stack-exchange-site
+function timeSince(date: Date) {
+  const now = new Date().valueOf();
+  var seconds = Math.floor(now - date.valueOf() / 1000);
+
+  var interval = seconds / 31536000;
+
+  if (interval > 1) {
+    return Math.floor(interval) + " years";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " months";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " days";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " hours";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " minutes";
+  }
+  return Math.floor(seconds) + " seconds";
+}
+
+async function init() {
+  const repo = await nodegit.Repository.open("../fnMatch");
+  const firstCommitOnMaster = await repo.getMasterCommit();
+  // Create a new history event emitter.
+  var history = firstCommitOnMaster.history();
+
+  // Create a counter to only show up to 9 entries.
+  var count = 0;
+
+  // Listen for commit events from the history.
+  history.on("commit", function (commit) {
+    // Disregard commits past 9.
+    if (++count >= 9) {
+      return;
+    }
+
+    // Show the commit sha.
+    console.log("commit " + commit.sha());
+
+    // Store the author object.
+    var author = commit.author();
+
+    // Display author information.
+    console.log("Author:\t" + author.name() + " <" + author.email() + ">");
+
+    // Show the commit date.
+    console.log("Date:\t" + commit.date());
+
+    // Give some space and show the message.
+    console.log("\n    " + commit.message());
+  });
+
+  // Start emitting events.
+  history.start();
+}
+
+// init();
+
+import path from "path";
+
+async function status() {
+  nodegit.Repository.open(path.resolve(__dirname, "./.git")).then(function (
+    repo
+  ) {
+    repo.getStatus().then(function (statuses) {
+      function statusToText(status: nodegit.StatusFile) {
+        var words = [];
+        if (status.isNew()) {
+          words.push("NEW");
+        }
+        if (status.isModified()) {
+          words.push("MODIFIED");
+        }
+        if (status.isTypechange()) {
+          words.push("TYPECHANGE");
+        }
+        if (status.isRenamed()) {
+          words.push("RENAMED");
+        }
+        if (status.isIgnored()) {
+          words.push("IGNORED");
+        }
+
+        return words.join(" ");
+      }
+
+      statuses.forEach(function (file) {
+        console.log(file.path() + " " + statusToText(file));
+      });
+    });
+  });
+}
+
+// status();
+
+function walktree() {
+  // A `tree` in git is typically a representation of the filesystem at
+  // a revision. A tree has a set of entries, each entry being either a
+  // tree (directory), or a file.
+
+  nodegit.Repository.open(path.resolve(__dirname, "../fnMatch/.git"))
+    .then(function (repo) {
+      return repo.getMasterCommit();
+    })
+    .then(function (firstCommitOnMaster) {
+      return firstCommitOnMaster.getTree();
+    })
+    .then(function (tree) {
+      // `walk()` returns an event.
+      var walker = tree.walk();
+      walker.on("entry", function (entry) {
+        console.log(entry.path());
+      });
+
+      // Don't forget to call `start()`!
+      walker.start();
+    })
+    .catch(console.error);
+}
+
+// walktree();
