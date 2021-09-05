@@ -7,6 +7,7 @@ import TimeAgo from "javascript-time-ago";
 import chalk from "chalk";
 import en from "javascript-time-ago/locale/en";
 import path from "path";
+import { exec } from "child_process";
 
 TimeAgo.addDefaultLocale(en);
 const timeAgo = new TimeAgo("en-US");
@@ -15,10 +16,28 @@ const program = new Command();
 program.version("0.0.1");
 
 program
-  .command("checkout")
+  .command("checkout [branch]")
   .description("checkout a branch/commit")
+  .action((branch) => {
+    if (branch == null) {
+      checkout();
+    } else {
+      exec(`git checkout ${branch}`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          return;
+        }
+        process.stdout.write(stdout);
+        process.stderr.write(stderr);
+      });
+    }
+  });
+
+program
+  .command("commit")
+  .description("creates a branch/commit")
   .action(() => {
-    checkout();
+    // git checkout -b new-branch
   });
 
 program.parse(process.argv);
@@ -36,7 +55,8 @@ async function localBranches(repo: nodegit.Repository): Promise<Reference[]> {
 
 async function checkout() {
   const repo = await nodegit.Repository.open(
-    path.resolve(__dirname, "../git-test/.git")
+    process.cwd()
+    // path.resolve(__dirname, "../git-test/.git")
   );
 
   const locals = await localBranches(repo);
