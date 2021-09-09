@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 import { Command } from "commander";
 import inquirer from "inquirer";
@@ -6,7 +6,6 @@ import nodegit, { Reference } from "nodegit";
 import TimeAgo from "javascript-time-ago";
 import chalk from "chalk";
 import en from "javascript-time-ago/locale/en";
-import path from "path";
 import { exec } from "child_process";
 
 TimeAgo.addDefaultLocale(en);
@@ -34,10 +33,21 @@ program
   });
 
 program
-  .command("commit")
+  .command("commit <branchname> <message>")
   .description("creates a branch/commit")
-  .action(() => {
+  .action((branchname, message) => {
+    // if not on master:
     // git checkout -b new-branch
+    // git commit -m "message"
+  });
+
+program
+  .command("move <ref> <dest>")
+  .description("rebases a commit/branch somewhere else")
+  .action((ref, dest) => {
+    // git checkout ref
+    // git rebase dest
+    // rebase branches dependant on this one?
   });
 
 program.parse(process.argv);
@@ -54,10 +64,7 @@ async function localBranches(repo: nodegit.Repository): Promise<Reference[]> {
 }
 
 async function checkout() {
-  const repo = await nodegit.Repository.open(
-    process.cwd()
-    // path.resolve(__dirname, "../git-test/.git")
-  );
+  const repo = await nodegit.Repository.open(process.cwd());
 
   const locals = await localBranches(repo);
 
