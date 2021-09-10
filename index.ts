@@ -8,6 +8,8 @@ import chalk from "chalk";
 import en from "javascript-time-ago/locale/en";
 import { exec } from "child_process";
 import { localBranches, oidToRefMap } from "./src/branches";
+import { EOL } from "os";
+import { stripAnsi } from "./src/ansi";
 
 TimeAgo.addDefaultLocale(en);
 const timeAgo = new TimeAgo("en-US");
@@ -134,7 +136,9 @@ program
 program
   .command("test ")
   .description("just testing stuff for development")
-  .action(async () => {});
+  .action(async () => {
+    console.log(process.stdout.columns, typeof process.stdout.columns);
+  });
 
 program.parse(process.argv);
 
@@ -196,7 +200,7 @@ async function showBranchList(repo: nodegit.Repository) {
           sha: oid,
           date: commit.date(),
           shorthand: branch.shorthand(),
-          message: commit.message(),
+          message: commit.message().trim().split(EOL)[0],
           isHead: branch.isHead(),
           branch,
         };
@@ -218,6 +222,9 @@ async function showBranchList(repo: nodegit.Repository) {
     }
   }
 
+  const COLUMNS = process.stdout.columns;
+  const COMMANDER_LIST_INDICATOR_LENGTH = 2;
+
   const choices = results.map(
     ({ sha: fullSha, date, shorthand, message, branch, isHead }) => {
       const h = isHead ? "*" : " ";
@@ -227,9 +234,20 @@ async function showBranchList(repo: nodegit.Repository) {
         .format(date)
         .replace("minutes", "mins")
         .padEnd(longestTimeLen);
-      const msg = chalk.dim(message.trim());
+      const msg = message.trim();
+
+      let name = `${h} ${tAgo} ${sha} ${bname}`;
+
+      const widthWithoutMsg =
+        COMMANDER_LIST_INDICATOR_LENGTH + 1 + stripAnsi(name).length;
+
+      if (COLUMNS - widthWithoutMsg > 5) {
+        const spaceLeft = COLUMNS - widthWithoutMsg;
+        name += " " + chalk.dim(msg.substring(0, spaceLeft - 1));
+      }
+
       return {
-        name: `${h} ${tAgo} ${sha} ${bname} ${msg}`,
+        name: name,
         value: branch,
         short: shorthand,
       };
@@ -240,9 +258,10 @@ async function showBranchList(repo: nodegit.Repository) {
     {
       type: "list",
       name: "branch",
-      message: "Branch to checkout:",
+      message: "on branch:",
       choices,
       default: choices[headIndex].value,
+      pageSize: 20,
     },
   ]);
 
