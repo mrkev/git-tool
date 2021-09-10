@@ -20,6 +20,12 @@ program
   .action(async (branch) => {
     const repo = await nodegit.Repository.open(process.cwd());
     if (branch == null) {
+      const statusText = await getStatusText(repo);
+      if (statusText.length) {
+        console.log(chalk.dim("Changes not staged for commit:"));
+        console.log(statusText.map((text) => `    ${text}`).join("\n"), "\n");
+      }
+
       await showBranchList(repo);
       return;
     }
@@ -80,7 +86,74 @@ program
     // rebase branches dependant on this one?
   });
 
+program
+  .command("test ")
+  .description("just testing stuff for development")
+  .action(async () => {
+    const repo = await nodegit.Repository.open(process.cwd());
+    const statuses = await repo.getStatus();
+    function statusToText(status: nodegit.StatusFile) {
+      var words = [];
+      if (status.isNew()) {
+        words.push("NEW");
+      }
+      if (status.isModified()) {
+        words.push("MODIFIED");
+      }
+      if (status.isTypechange()) {
+        words.push("TYPECHANGE");
+      }
+      if (status.isRenamed()) {
+        words.push("RENAMED");
+      }
+      if (status.isIgnored()) {
+        words.push("IGNORED");
+      }
+
+      return words.join(" ");
+    }
+
+    statuses.forEach(function (file) {
+      console.log(file.path() + " " + statusToText(file));
+    });
+  });
+
 program.parse(process.argv);
+
+async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
+  const statuses = await repo.getStatus();
+  function statusToText(status: nodegit.StatusFile): [string, chalk.Chalk] {
+    const words = [];
+    let color: chalk.Chalk = chalk.reset;
+    if (status.isNew()) {
+      words.push("NEW");
+      color = chalk.green;
+    }
+    if (status.isModified()) {
+      words.push("MODIFIED");
+      color = chalk.yellow;
+    }
+    if (status.isTypechange()) {
+      words.push("TYPECHANGE");
+      color = chalk.magenta;
+    }
+    if (status.isRenamed()) {
+      words.push("RENAMED");
+      color = chalk.yellow;
+    }
+    if (status.isIgnored()) {
+      words.push("IGNORED");
+      color = chalk.red;
+    }
+
+    return [words.join(" "), color];
+  }
+
+  return statuses.map(function (file) {
+    const [words, color] = statusToText(file);
+    return color(file.path() + " " + words);
+  });
+}
 
 async function localBranches(repo: nodegit.Repository): Promise<Reference[]> {
   const names = await nodegit.Reference.list(repo);
