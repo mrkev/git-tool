@@ -15,21 +15,51 @@ const program = new Command();
 program.version("0.0.1");
 
 program
-  .command("checkout [branch]")
-  .description("checkout a branch/commit")
-  .action((branch) => {
+  .command("branch [branch]")
+  .description("branch a branch/commit")
+  .action(async (branch) => {
+    const repo = await nodegit.Repository.open(process.cwd());
     if (branch == null) {
-      checkout();
-    } else {
-      exec(`git checkout ${branch}`, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          return;
-        }
-        process.stdout.write(stdout);
-        process.stderr.write(stderr);
-      });
+      await showBranchList(repo);
+      return;
     }
+
+    const branches = (await localBranches(repo)).map((branch) =>
+      branch.shorthand()
+    );
+
+    if (branches.indexOf(branch) === -1) {
+      const { create } = await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "create",
+          message: `No branch named '${branch}'. Create one?`,
+          default: false,
+        },
+      ]);
+
+      if (create) {
+        exec(`git checkout -b ${branch}`, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`exec error: ${error}`);
+            return;
+          }
+          process.stdout.write(stdout);
+          process.stderr.write(stderr);
+        });
+      }
+
+      return;
+    }
+
+    exec(`git checkout ${branch}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return;
+      }
+      process.stdout.write(stdout);
+      process.stderr.write(stderr);
+    });
   });
 
 program
@@ -63,9 +93,7 @@ async function localBranches(repo: nodegit.Repository): Promise<Reference[]> {
   return branches;
 }
 
-async function checkout() {
-  const repo = await nodegit.Repository.open(process.cwd());
-
+async function showBranchList(repo: nodegit.Repository) {
   const locals = await localBranches(repo);
 
   const results = (
@@ -118,22 +146,20 @@ async function checkout() {
     }
   );
 
-  inquirer
-    .prompt([
-      {
-        type: "list",
-        name: "branch",
-        message: "Branch to checkout:",
-        choices,
-        default: choices[headIndex].value,
-      },
-    ])
-    .then(async function (answers) {
-      const branch: nodegit.Reference = answers.branch;
-      try {
-        await repo.checkoutBranch(branch);
-      } catch (e) {
-        console.error(e);
-      }
-    });
+  const answers = await inquirer.prompt([
+    {
+      type: "list",
+      name: "branch",
+      message: "Branch to checkout:",
+      choices,
+      default: choices[headIndex].value,
+    },
+  ]);
+
+  const branch: nodegit.Reference = answers.branch;
+  try {
+    await repo.checkoutBranch(branch);
+  } catch (e) {
+    console.error(e);
+  }
 }
