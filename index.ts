@@ -2,11 +2,12 @@
 
 import { Command } from "commander";
 import inquirer from "inquirer";
-import nodegit, { Reference } from "nodegit";
+import nodegit from "nodegit";
 import TimeAgo from "javascript-time-ago";
 import chalk from "chalk";
 import en from "javascript-time-ago/locale/en";
 import { exec } from "child_process";
+import { localBranches, oidToRefMap } from "./src/branches";
 
 TimeAgo.addDefaultLocale(en);
 const timeAgo = new TimeAgo("en-US");
@@ -87,36 +88,53 @@ program
   });
 
 program
+  .command("log")
+  .description("git log clone")
+  .action(async () => {
+    // TODO: use revwalk to give this a limit
+    const repo = await getRepo();
+
+    const oidToRef = await oidToRefMap(repo);
+
+    const headCommit = await repo.getHeadCommit();
+    const currentBranchName = (await repo.getCurrentBranch()).name();
+
+    // History returns an event.
+    const history = headCommit.history();
+
+    // History emits "commit" event for each commit in the branch's history
+    history.on("commit", function (commit: nodegit.Commit) {
+      const sha = commit.sha();
+      const branches = oidToRef.has(commit.sha())
+        ? oidToRef.get(sha)!.map((ref) => {
+            let text = "";
+            if (currentBranchName === ref.name()) {
+              text += chalk.blue("HEAD -> ");
+            }
+            text += chalk.green(ref.shorthand());
+            return text;
+          })
+        : [];
+
+      const branchText = branches.length > 0 ? `(${branches.join(", ")})` : "";
+
+      console.log(chalk.yellow("commit " + commit.sha()), branchText);
+
+      console.log(
+        "Author:",
+        commit.author().name() + " <" + commit.author().email() + ">"
+      );
+      console.log("Date:", commit.date());
+      console.log("\n    " + commit.message());
+    });
+
+    history.start();
+  });
+
+program
   .command("test ")
   .description("just testing stuff for development")
-  .action(async () => {
-    const repo = await getRepo();
-    const statuses = await repo.getStatus();
-    function statusToText(status: nodegit.StatusFile) {
-      var words = [];
-      if (status.isNew()) {
-        words.push("NEW");
-      }
-      if (status.isModified()) {
-        words.push("MODIFIED");
-      }
-      if (status.isTypechange()) {
-        words.push("TYPECHANGE");
-      }
-      if (status.isRenamed()) {
-        words.push("RENAMED");
-      }
-      if (status.isIgnored()) {
-        words.push("IGNORED");
-      }
-
-      return words.join(" ");
-    }
-
-    statuses.forEach(function (file) {
-      console.log(file.path() + " " + statusToText(file));
-    });
-  });
+  .action(async () => {});
 
 program.parse(process.argv);
 
@@ -163,17 +181,6 @@ async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
     const [words, color] = statusToText(file);
     return color(file.path() + " " + words);
   });
-}
-
-async function localBranches(repo: nodegit.Repository): Promise<Reference[]> {
-  const names = await nodegit.Reference.list(repo);
-  const refs = await Promise.all(
-    names.map((name) => nodegit.Reference.lookup(repo, name))
-  );
-  // isBranch returns 1 when the reference lives in the refs/heads
-  // therefore, local branches only
-  const branches = refs.filter((ref) => ref.isBranch() == 1);
-  return branches;
 }
 
 async function showBranchList(repo: nodegit.Repository) {
