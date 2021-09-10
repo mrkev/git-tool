@@ -18,7 +18,7 @@ program
   .command("branch [branch]")
   .description("branch a branch/commit")
   .action(async (branch) => {
-    const repo = await nodegit.Repository.open(process.cwd());
+    const repo = await getRepo();
     if (branch == null) {
       const statusText = await getStatusText(repo);
       if (statusText.length) {
@@ -90,7 +90,7 @@ program
   .command("test ")
   .description("just testing stuff for development")
   .action(async () => {
-    const repo = await nodegit.Repository.open(process.cwd());
+    const repo = await getRepo();
     const statuses = await repo.getStatus();
     function statusToText(status: nodegit.StatusFile) {
       var words = [];
@@ -119,6 +119,16 @@ program
   });
 
 program.parse(process.argv);
+
+async function getRepo(): Promise<nodegit.Repository> {
+  const path = await nodegit.Repository.discover(
+    process.cwd(),
+    0,
+    require("os").homedir()
+  );
+  const repo = await nodegit.Repository.open(path);
+  return repo;
+}
 
 async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
   const statuses = await repo.getStatus();
