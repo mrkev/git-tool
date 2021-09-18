@@ -1,18 +1,12 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import inquirer from "inquirer";
 import nodegit from "nodegit";
-import TimeAgo from "javascript-time-ago";
 import chalk from "chalk";
-import en from "javascript-time-ago/locale/en";
-import { exec } from "child_process";
-import { localBranches, oidToRefMap } from "./src/branches";
-import { EOL } from "os";
-import { stripAnsi } from "./src/ansi";
-
-TimeAgo.addDefaultLocale(en);
-const timeAgo = new TimeAgo("en-US");
+import { spawn } from "child_process";
+import { execAsync } from "./src/exec";
+import { oidToRefMap } from "./src/branches";
+import { ggBranch } from "./src/gg-branch";
 
 const program = new Command();
 program.version("0.0.1");
@@ -20,56 +14,7 @@ program.version("0.0.1");
 program
   .command("branch [branch]")
   .description("branch a branch/commit")
-  .action(async (branch) => {
-    const repo = await getRepo();
-    if (branch == null) {
-      const statusText = await getStatusText(repo);
-      if (statusText.length) {
-        console.log(chalk.dim("Changes not staged for commit:"));
-        console.log(statusText.map((text) => `    ${text}`).join("\n"), "\n");
-      }
-
-      await showBranchList(repo);
-      return;
-    }
-
-    const branches = (await localBranches(repo)).map((branch) =>
-      branch.shorthand()
-    );
-
-    if (branches.indexOf(branch) === -1) {
-      const { create } = await inquirer.prompt([
-        {
-          type: "confirm",
-          name: "create",
-          message: `No branch named '${branch}'. Create one?`,
-          default: false,
-        },
-      ]);
-
-      if (create) {
-        exec(`git checkout -b ${branch}`, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`exec error: ${error}`);
-            return;
-          }
-          process.stdout.write(stdout);
-          process.stderr.write(stderr);
-        });
-      }
-
-      return;
-    }
-
-    exec(`git checkout ${branch}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-        return;
-      }
-      process.stdout.write(stdout);
-      process.stderr.write(stderr);
-    });
-  });
+  .action((branch?: string) => ggBranch(branch || null));
 
 program
   .command("commit <branchname> <message>")
@@ -134,7 +79,48 @@ program
   });
 
 program
-  .command("test ")
+  .command("tree")
+  .description("prints the branch tree")
+  .action(async function () {
+    spawn(
+      "git",
+      [
+        "log",
+        "--graph",
+        "--pretty=format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset%n",
+        "--abbrev-commit",
+        "--date=relative",
+        "--branches",
+      ],
+      { stdio: "inherit" }
+    );
+  });
+
+program
+  .command("pr")
+  .description("WIP")
+  .action(async function () {
+    // TODO: do I need to think about pushing?
+    const repo = await getRepo();
+    const oidToRef = await oidToRefMap(repo);
+    const [HEADmin1, err1] = await execAsync("git rev-parse HEAD^1");
+    process.stderr.write(err1);
+    const baseRef = oidToRef.get(HEADmin1);
+    if (!baseRef || baseRef.length === 0) {
+      throw new Error("Not on top of another branch");
+    }
+    const base = baseRef[0].shorthand();
+    const [currentBranch, err2] = await execAsync(`git branch --show-current`);
+    process.stderr.write(err2);
+    const [result, err3] = await execAsync(
+      `gh pr create --base ${base} --head ${currentBranch}`
+    );
+    process.stdout.write(result);
+    process.stderr.write(err3);
+  });
+
+program
+  .command("test")
   .description("just testing stuff for development")
   .action(async () => {
     console.log(process.stdout.columns, typeof process.stdout.columns);
@@ -142,7 +128,7 @@ program
 
 program.parse(process.argv);
 
-async function getRepo(): Promise<nodegit.Repository> {
+export async function getRepo(): Promise<nodegit.Repository> {
   const path = await nodegit.Repository.discover(
     process.cwd(),
     0,
@@ -152,7 +138,9 @@ async function getRepo(): Promise<nodegit.Repository> {
   return repo;
 }
 
-async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
+export async function getStatusText(
+  repo: nodegit.Repository
+): Promise<Array<string>> {
   const statuses = await repo.getStatus();
   function statusToText(status: nodegit.StatusFile): [string, chalk.Chalk] {
     const words = [];
@@ -185,90 +173,4 @@ async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
     const [words, color] = statusToText(file);
     return color(file.path() + " " + words);
   });
-}
-
-async function showBranchList(repo: nodegit.Repository) {
-  const locals = await localBranches(repo);
-
-  const results = (
-    await Promise.all(
-      locals.map(async (branch) => {
-        const oid = branch.target().tostrS();
-        const commit = await nodegit.Commit.lookup(repo, oid);
-
-        return {
-          sha: oid,
-          date: commit.date(),
-          shorthand: branch.shorthand(),
-          message: commit.message().trim().split(EOL)[0],
-          isHead: branch.isHead(),
-          branch,
-        };
-      })
-    )
-  ).sort(
-    ({ date: date1 }, { date: date2 }) => date2.valueOf() - date1.valueOf()
-  );
-
-  let longestTimeLen = 0;
-  let headIndex = 0;
-  for (let i = 0; i < results.length; i++) {
-    const { date, isHead } = results[i];
-    const tAgo = timeAgo.format(date).replace("minutes", "mins");
-    longestTimeLen =
-      tAgo.length > longestTimeLen ? tAgo.length : longestTimeLen;
-    if (isHead) {
-      headIndex = i;
-    }
-  }
-
-  const COLUMNS = process.stdout.columns;
-  const COMMANDER_LIST_INDICATOR_LENGTH = 2;
-
-  const choices = results.map(
-    ({ sha: fullSha, date, shorthand, message, branch, isHead }) => {
-      const h = isHead ? "*" : " ";
-      const sha = chalk.dim(fullSha.substring(0, 5));
-      const bname = chalk.green(shorthand);
-      const tAgo = timeAgo
-        .format(date)
-        .replace("minutes", "mins")
-        .padEnd(longestTimeLen);
-      const msg = message.trim();
-
-      let name = `${h} ${tAgo} ${sha} ${bname}`;
-
-      const widthWithoutMsg =
-        COMMANDER_LIST_INDICATOR_LENGTH + 1 + stripAnsi(name).length;
-
-      if (COLUMNS - widthWithoutMsg > 5) {
-        const spaceLeft = COLUMNS - widthWithoutMsg;
-        name += " " + chalk.dim(msg.substring(0, spaceLeft - 1));
-      }
-
-      return {
-        name: name,
-        value: branch,
-        short: shorthand,
-      };
-    }
-  );
-
-  const answers = await inquirer.prompt([
-    {
-      type: "list",
-      name: "branch",
-      message: "on branch:",
-      choices,
-      default: choices[headIndex].value,
-      pageSize: 20,
-    },
-  ]);
-
-  const branch: nodegit.Reference = answers.branch;
-  try {
-    await repo.checkoutBranch(branch);
-  } catch (e) {
-    console.error(e);
-  }
 }
