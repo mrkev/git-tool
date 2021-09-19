@@ -2,29 +2,39 @@ import inquirer from "inquirer";
 import chalk from "chalk";
 import { exec } from "child_process";
 import { localBranches } from "./branches";
-import { getRepo, getStatusText } from "../index";
+import { getRepo } from "./repo";
+import { getStatusText } from "./status";
 import { EOL } from "os";
 import { stripAnsi } from "./ansi";
 import nodegit from "nodegit";
 import en from "javascript-time-ago/locale/en";
 import TimeAgo from "javascript-time-ago";
+import CustomListPrompt from "./CustomListPrompt";
+
+inquirer.registerPrompt("custom-list", CustomListPrompt);
 
 TimeAgo.addDefaultLocale(en);
 const timeAgo = new TimeAgo("en-US");
 
+/**
+ * gg branch [branch]
+ */
 export async function ggBranch(branch: string | null) {
   const repo = await getRepo();
+
+  // Show list
   if (branch == null) {
     const statusText = await getStatusText(repo);
     if (statusText.length) {
-      console.log(chalk.dim("Changes not staged for commit:"));
-      console.log(statusText.map((text) => `    ${text}`).join("\n"), "\n");
+      console.log(chalk.dim("\nChanges not staged for commit:"));
+      console.log(statusText.map((text) => `    ${text}`).join("\n"));
     }
 
     await showBranchList(repo);
     return;
   }
 
+  // Create branch
   const branches = (await localBranches(repo)).map((branch) =>
     branch.shorthand()
   );
@@ -53,6 +63,7 @@ export async function ggBranch(branch: string | null) {
     return;
   }
 
+  // Checkout branch
   exec(`git checkout ${branch}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -130,21 +141,31 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
     }
   );
 
-  const answers = await inquirer.prompt([
+  const prompt = inquirer.prompt([
     {
-      type: "list",
+      type: "custom-list",
       name: "branch",
       message: "on branch:",
       choices,
       default: choices[headIndex].value,
       pageSize: 20,
+      loop: false,
     },
   ]);
 
-  const branch: nodegit.Reference = answers.branch;
-  try {
-    await repo.checkoutBranch(branch);
-  } catch (e) {
-    console.error(e);
-  }
+  prompt.then(async function (answers) {
+    const branch: nodegit.Reference = answers.branch;
+    try {
+      await repo.checkoutBranch(branch);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  process.stdin.on("keypress", function (x) {
+    if (x === "q") {
+      (prompt.ui as any).close();
+      console.log("\nCancelled by the user.");
+    }
+  });
 }

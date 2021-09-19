@@ -7,12 +7,14 @@ import { spawn } from "child_process";
 import { execAsync } from "./src/exec";
 import { oidToRefMap } from "./src/branches";
 import { ggBranch } from "./src/gg-branch";
+import { getRepo } from "./src/repo";
 
 const program = new Command();
 program.version("0.0.1");
 
 program
   .command("branch [branch]")
+  .alias("b")
   .description("branch a branch/commit")
   .action((branch?: string) => ggBranch(branch || null));
 
@@ -127,50 +129,3 @@ program
   });
 
 program.parse(process.argv);
-
-export async function getRepo(): Promise<nodegit.Repository> {
-  const path = await nodegit.Repository.discover(
-    process.cwd(),
-    0,
-    require("os").homedir()
-  );
-  const repo = await nodegit.Repository.open(path);
-  return repo;
-}
-
-export async function getStatusText(
-  repo: nodegit.Repository
-): Promise<Array<string>> {
-  const statuses = await repo.getStatus();
-  function statusToText(status: nodegit.StatusFile): [string, chalk.Chalk] {
-    const words = [];
-    let color: chalk.Chalk = chalk.reset;
-    if (status.isNew()) {
-      words.push("NEW");
-      color = chalk.green;
-    }
-    if (status.isModified()) {
-      words.push("MODIFIED");
-      color = chalk.yellow;
-    }
-    if (status.isTypechange()) {
-      words.push("TYPECHANGE");
-      color = chalk.magenta;
-    }
-    if (status.isRenamed()) {
-      words.push("RENAMED");
-      color = chalk.yellow;
-    }
-    if (status.isIgnored()) {
-      words.push("IGNORED");
-      color = chalk.red;
-    }
-
-    return [words.join(" "), color];
-  }
-
-  return statuses.map(function (file) {
-    const [words, color] = statusToText(file);
-    return color(file.path() + " " + words);
-  });
-}
