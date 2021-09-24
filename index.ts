@@ -37,6 +37,26 @@ program
   });
 
 program
+  .command("delmerged")
+  .description("rebases a commit/branch somewhere else")
+  .action(async (ref, dest) => {
+    let result, err;
+    // cleans local refs for merged branches
+    [result, err] = await execAsync(
+      `gh branch --merged` +
+        ` | egrep -v "(^\*|master|main|dev)"` +
+        ` | xargs git branch -d`
+    );
+    process.stdout.write(result);
+    process.stderr.write(err);
+
+    // cleans remote refs for deleted or merged ? branches
+    [result, err] = await execAsync(`gh remote prune origin`);
+    process.stdout.write(result);
+    process.stderr.write(err);
+  });
+
+program
   .command("log")
   .description("git log clone")
   .action(async () => {
