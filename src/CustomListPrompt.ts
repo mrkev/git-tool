@@ -1,4 +1,3 @@
-"use strict";
 /**
  * `list` type prompt
  */
@@ -9,8 +8,8 @@ import chalk from "chalk";
 import figures from "figures";
 import cliCursor from "cli-cursor";
 // @ts-ignore
-import runAsync from "run-async";
-import { flatMap, map, take, takeUntil } from "rxjs/operators";
+// import runAsync from "run-async";
+// import { flatMap, map, take, takeUntil } from "rxjs/operators";
 import observe from "inquirer/lib/utils/events";
 import Paginator from "inquirer/lib/utils/paginator";
 
@@ -18,13 +17,14 @@ import Prompt from "inquirer/lib/prompts/base";
 import inquirer from "inquirer";
 import { Interface as ReadlineInterface } from "readline";
 import Choices from "inquirer/lib/objects/choices";
-const keypress = require("keypress");
+import Choice from "inquirer/lib/objects/choice";
+import Separator from "inquirer/lib/objects/separator";
 
 export default class CustomListPrompt extends Prompt {
   /**
    * Resolves the value of the prompt.
    */
-  protected done: (value: any) => void = undefined as any;
+  protected done: ((value: any) => void) | null = null;
 
   /**
    * Gets or sets a value indicating whether the prompt has been rendered the first time.
@@ -88,6 +88,29 @@ export default class CustomListPrompt extends Prompt {
    * Start the Inquiry session
    */
 
+  commandInput: string = "";
+  executeCommand() {
+    switch (this.commandInput) {
+      case "q":
+        process.exit(0);
+      case "m":
+        process.stderr.write(this.mode + "\n\n\n\n\n\n");
+    }
+    this.commandInput = "";
+  }
+
+  setMode(mode: "command" | "list"): void {
+    this.mode = mode;
+    if (mode === "command") {
+      cliCursor.show();
+    } else {
+      this.commandInput = "";
+      cliCursor.hide();
+    }
+
+    this.render();
+  }
+
   onKeypress = (
     char: string,
     key: {
@@ -99,37 +122,84 @@ export default class CustomListPrompt extends Prompt {
       code: string;
     }
   ): void => {
-    // console.log(key);
-    switch (key.name) {
-      case "down":
-      case "j":
-        this.onDownKey();
-        break;
-      case "up":
-      case "k":
-        this.onUpKey();
-        break;
+    if (char === "p") {
+      process.stderr.write(this.mode + "\n\n\n\n\n\n");
+    }
 
-      case "escape":
-        this.mode = "command";
-        break;
+    // Command mode
+    if (this.mode === "command") {
+      switch (key.name) {
+        case "backspace":
+          if (this.commandInput.length === 0) {
+            break;
+          }
 
-      case "1":
-      case "2":
-      case "3":
-      case "4":
-      case "5":
-      case "6":
-      case "7":
-      case "8":
-      case "9":
-      case "0":
-        this.onNumberKey(parseInt(key.name));
-        break;
+          this.commandInput = this.commandInput.slice(0, -1);
+          this.render();
 
-      // case "return":
-      default:
-        break;
+          break;
+        case "escape":
+          this.setMode("list");
+          break;
+
+        case "return":
+          this.executeCommand();
+          break;
+
+        default:
+          if (char != null && key.name !== "return") {
+            this.commandInput += char;
+            this.render();
+          }
+      }
+
+      // we might've changed this.mode
+      // so short circuit the guard for "list" below
+      return;
+    }
+
+    // List mode
+    if (this.mode === "list") {
+      // console.log(key);
+      switch (key.name) {
+        case "down":
+        case "j":
+          this.onDownKey();
+          break;
+        case "up":
+        case "k":
+          this.onUpKey();
+          break;
+
+        case "escape":
+          this.setMode("command");
+          break;
+
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+        case "0":
+          this.onNumberKey(parseInt(key.name));
+          break;
+
+        case "return":
+          const value = this.getCurrentValue();
+          // I think I copied this correctly?
+          const filtered = (this.opt.filter as any)(value, this.answers);
+          // .catch(
+          //   (err: any) => err
+          // );
+          this.onSubmit(filtered);
+
+        default:
+          break;
+      }
     }
   };
 
@@ -158,17 +228,21 @@ export default class CustomListPrompt extends Prompt {
     //   .pipe(takeUntil(events.line))
     //   .forEach(this.onNumberKey.bind(this) as any);
 
-    events.line
-      .pipe(
-        take(1),
-        map(this.getCurrentValue.bind(this)),
-        flatMap((value: any) =>
-          runAsync(self.opt.filter)(value, self.answers).catch(
-            (err: any) => err
-          )
-        )
-      )
-      .forEach(this.onSubmit.bind(this));
+    // events.line
+    //   .pipe(
+    //     // This is why this is here:
+    //     // https://github.com/SBoudrias/Inquirer.js/issues/395
+    //     // I haven't tested this with multiple questions, but
+    //     // I don't think I need multiple questions either
+    //     take(1),
+    //     map(this.getCurrentValue.bind(this)),
+    //     flatMap((value: any) =>
+    //       runAsync(self.opt.filter)(value, self.answers).catch(
+    //         (err: any) => err
+    //       )
+    //     )
+    //   )
+    //   .forEach(this.onSubmit.bind(this));
 
     // Init the prompt
     cliCursor.hide();
@@ -197,7 +271,7 @@ export default class CustomListPrompt extends Prompt {
     }
 
     // Render list
-    const choicesStr = listRender(this.opt.choices, this.selected);
+    const choicesStr = this.listRender(this.opt.choices, this.selected);
     const indexPosition = this.opt.choices.indexOf(
       this.opt.choices.getChoice(this.selected) as any
     );
@@ -230,7 +304,63 @@ export default class CustomListPrompt extends Prompt {
         (this.opt as any).pageSize
       );
 
-    (this.screen as any).render(message);
+    // Line for commands
+    if (this.mode === "list") {
+      message += "\n";
+    } else {
+      // const dimMessage = "(q: quit, /: search)";
+      message += "\n:" + this.commandInput;
+    }
+
+    this.screen.render(message, "");
+  }
+
+  listRender(choices: Choices, pointer: number): string {
+    let output = "";
+    let separatorOffset = 0;
+
+    const filter =
+      this.commandInput[0] === "/" ? this.commandInput.substring(1) : "";
+
+    choices
+      .filter(((choice: Choice<any> | Separator) => {
+        if (filter === "") {
+          return true;
+        }
+        return (
+          !(choice instanceof Separator) && choice.short.indexOf(filter) > -1
+        );
+      }) as any)
+      .forEach((choice, i) => {
+        if (choice.type === "separator") {
+          separatorOffset++;
+          output += "  " + choice + "\n";
+          return;
+        }
+
+        if (choice.disabled) {
+          separatorOffset++;
+          output += "  - " + choice.name;
+          output +=
+            " (" +
+            (typeof choice.disabled === "string"
+              ? choice.disabled
+              : "Disabled") +
+            ")";
+          output += "\n";
+          return;
+        }
+
+        const isSelected = i - separatorOffset === pointer;
+        let line = (isSelected ? figures.pointer + " " : "  ") + choice.name;
+        if (isSelected) {
+          line = chalk.cyan(line);
+        }
+
+        output += line + " \n";
+      });
+
+    return output.replace(/\n$/, "");
   }
 
   /**
@@ -245,7 +375,11 @@ export default class CustomListPrompt extends Prompt {
 
     this.screen.done();
     cliCursor.show();
-    this.done(value);
+    if (this.done == null) {
+      throw new Error("No finall callback!");
+    } else {
+      this.done(value);
+    }
   }
 
   getCurrentValue(): void {
@@ -279,39 +413,6 @@ export default class CustomListPrompt extends Prompt {
  * @param  {Number} pointer Position of the pointer
  * @return {String}         Rendered content
  */
-function listRender(choices: Choices, pointer: number): string {
-  let output = "";
-  let separatorOffset = 0;
-
-  choices.forEach((choice, i) => {
-    if (choice.type === "separator") {
-      separatorOffset++;
-      output += "  " + choice + "\n";
-      return;
-    }
-
-    if (choice.disabled) {
-      separatorOffset++;
-      output += "  - " + choice.name;
-      output +=
-        " (" +
-        (typeof choice.disabled === "string" ? choice.disabled : "Disabled") +
-        ")";
-      output += "\n";
-      return;
-    }
-
-    const isSelected = i - separatorOffset === pointer;
-    let line = (isSelected ? figures.pointer + " " : "  ") + choice.name;
-    if (isSelected) {
-      line = chalk.cyan(line);
-    }
-
-    output += line + " \n";
-  });
-
-  return output.replace(/\n$/, "");
-}
 
 function incrementListIndex(current: any, dir: any, opt: any) {
   const len = opt.choices.realLength;

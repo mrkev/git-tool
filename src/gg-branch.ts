@@ -141,6 +141,9 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
     }
   );
 
+  // console.log(choices);
+  // process.exit(0);
+
   const prompt = inquirer.prompt([
     {
       type: "custom-list",
@@ -162,10 +165,10 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
     }
   });
 
-  process.stdin.on("keypress", function (x) {
-    if (x === "q") {
-      (prompt.ui as any).close();
-      console.log("\nCancelled by the user.");
-    }
-  });
+  // process.stdin.on("keypress", function (x) {
+  //   if (x === "q") {
+  //     (prompt.ui as any).close();
+  //     console.log("\nCancelled by the user.");
+  //   }
+  // });
 }
