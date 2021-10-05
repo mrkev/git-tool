@@ -36,6 +36,11 @@ export default class CustomListPrompt extends Prompt {
    */
   protected selected: number;
 
+  private readonly defaultSelected: number;
+
+  /** Lines marked for a future operation */
+  private marked: Set<number> = new Set();
+
   /**
    * Gets or sets an object for paginating the content.
    */
@@ -74,6 +79,8 @@ export default class CustomListPrompt extends Prompt {
       this.selected = Math.max(index, 0);
     }
 
+    this.defaultSelected = this.selected;
+
     // Make sure no default is set (so it won't be printed)
     this.opt.default = null;
 
@@ -93,13 +100,32 @@ export default class CustomListPrompt extends Prompt {
     switch (this.commandInput) {
       case "q":
         process.exit(0);
+        break;
       case "m":
         process.stderr.write(this.mode + "\n\n\n\n\n\n");
+        break;
+
+      case "del":
+      case "delete":
+      case "d":
+        break;
+
+      case "help":
+        process.stderr.write(
+          "commands: q (quit)qm (print mode)\n" + "immediates: "
+        );
+
+      case "pull":
+      // TODO: same as git checkout [selected branch]
+      //               git pull
+      case "delmerged":
+        // TODO: deletes all merged branches
+        break;
     }
     this.commandInput = "";
   }
 
-  setMode(mode: "command" | "list"): void {
+  private setMode(mode: "command" | "list"): void {
     this.mode = mode;
     if (mode === "command") {
       cliCursor.show();
@@ -107,7 +133,6 @@ export default class CustomListPrompt extends Prompt {
       this.commandInput = "";
       cliCursor.hide();
     }
-
     this.render();
   }
 
@@ -162,6 +187,7 @@ export default class CustomListPrompt extends Prompt {
     if (this.mode === "list") {
       // console.log(key);
       switch (key.name) {
+        // Movement
         case "down":
         case "j":
           this.onDownKey();
@@ -171,21 +197,30 @@ export default class CustomListPrompt extends Prompt {
           this.onUpKey();
           break;
 
-        case "escape":
-          this.setMode("command");
+        // Select/mark a
+        case "s":
+          if (this.marked.has(this.selected)) {
+            this.marked.delete(this.selected);
+          } else {
+            this.marked.add(this.selected);
+          }
+          this.render();
           break;
 
-        case "1":
-        case "2":
-        case "3":
-        case "4":
-        case "5":
-        case "6":
-        case "7":
-        case "8":
-        case "9":
-        case "0":
-          this.onNumberKey(parseInt(key.name));
+        // Space "resets the camera" and selects the default option
+        case "space":
+          this.selected = this.defaultSelected;
+          this.render();
+          break;
+
+        // Q quits immediately
+        case "q":
+          process.exit(0);
+          break;
+
+        // Esc enters command mode
+        case "escape":
+          this.setMode("command");
           break;
 
         case "return":
@@ -271,7 +306,11 @@ export default class CustomListPrompt extends Prompt {
     }
 
     // Render list
-    const choicesStr = this.listRender(this.opt.choices, this.selected);
+    const choicesStr = this.listRender(
+      this.opt.choices,
+      this.selected,
+      this.marked
+    );
     const indexPosition = this.opt.choices.indexOf(
       this.opt.choices.getChoice(this.selected) as any
     );
@@ -315,7 +354,7 @@ export default class CustomListPrompt extends Prompt {
     this.screen.render(message, "");
   }
 
-  listRender(choices: Choices, pointer: number): string {
+  listRender(choices: Choices, pointer: number, marked: Set<number>): string {
     let output = "";
     let separatorOffset = 0;
 
@@ -355,6 +394,10 @@ export default class CustomListPrompt extends Prompt {
         let line = (isSelected ? figures.pointer + " " : "  ") + choice.name;
         if (isSelected) {
           line = chalk.cyan(line);
+        }
+
+        if (marked.has(i)) {
+          line = chalk.inverse(line);
         }
 
         output += line + " \n";

@@ -12,6 +12,8 @@ import { getRepo } from "./src/repo";
 const program = new Command();
 program.version("0.0.1");
 
+program.action(() => ggBranch(null));
+
 program
   .command("branch [branch]")
   .alias("b")
@@ -19,7 +21,7 @@ program
   .action((branch?: string) => ggBranch(branch || null));
 
 program
-  .command("commit <branchname> <message>")
+  .command("commit [branchname] <message>")
   .description("creates a branch/commit")
   .action((branchname, message) => {
     // if not on master:
@@ -27,19 +29,19 @@ program
     // git commit -m "message"
   });
 
-program
-  .command("move <ref> <dest>")
-  .description("rebases a commit/branch somewhere else")
-  .action((ref, dest) => {
-    // git checkout ref
-    // git rebase dest
-    // rebase branches dependant on this one?
-  });
+// program
+//   .command("move <ref> <dest>")
+//   .description("rebases a commit/branch somewhere else")
+//   .action((ref, dest) => {
+//     // git checkout ref
+//     // git rebase dest
+//     // rebase branches dependant on this one?
+//   });
 
 program
   .command("delmerged")
   .description("rebases a commit/branch somewhere else")
-  .action(async (ref, dest) => {
+  .action(async () => {
     let result, err;
     // cleans local refs for merged branches
     [result, err] = await execAsync(
@@ -117,6 +119,34 @@ program
       { stdio: "inherit" }
     );
   });
+
+function getRemoteForBranchShortname(shortname: string) {
+  // git remote show origin
+  // git rev-parse @{u} // u is upstraem apparently
+  // git status -b --porcelain=v2 // machine readable
+  `git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)"`;
+}
+
+program
+  .command("remote-test")
+  .description("rebases a commit/branch somewhere else")
+  .action(async () => {
+    let result, err;
+    try {
+      [result, err] = await execAsync(
+        `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+      );
+
+      process.stdout.write(result);
+      console.log("NOW ERRE");
+      process.stderr.write(err);
+    } catch (e) {
+      //
+      console.log(result);
+    }
+  });
+
+//
 
 program
   .command("pr")
