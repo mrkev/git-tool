@@ -4,9 +4,8 @@ import {
   leastCommonAncestor,
   commitsBetween,
   refToOidMap,
+  getTrunkRef,
 } from "./branches";
-
-const TRUNK = "main";
 
 export class RefDeps {
   repo: Repository;
@@ -24,7 +23,9 @@ export class RefDeps {
     const headRef = await this.repo.head();
     const head = headRef.shorthand();
 
-    const trunkOid = (await repo.getReference(TRUNK)).target().tostrS();
+    const trunkRef = await getTrunkRef(repo);
+    const TRUNK = trunkRef.shorthand();
+    const trunkOid = trunkRef.target().tostrS();
 
     // if we're on TRUNK we return trunk. We don't really care for
     // showing previously merged branches which are now on trunk, at least for

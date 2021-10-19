@@ -5,7 +5,7 @@ import nodegit from "nodegit";
 import chalk from "chalk";
 import { spawn } from "child_process";
 import { execAsync } from "./src/exec";
-import { leastCommonAncestor, oidToRefMap } from "./src/branches";
+import { getTrunkRef, leastCommonAncestor, oidToRefMap } from "./src/branches";
 import { ggBranch } from "./src/gg-branch";
 import { getRepo } from "./src/repo";
 import { RefDeps } from "./src/RefDeps";
@@ -183,7 +183,8 @@ program
     const headRef = await repo.head();
     const heaBranchName = headRef.shorthand();
 
-    console.log(await refdeps.parentForBranch(heaBranchName));
+    // console.log(await refdeps.parentForBranch(heaBranchName));
+    console.log((await getTrunkRef(repo)).shorthand());
   });
 
 program.parse(process.argv);

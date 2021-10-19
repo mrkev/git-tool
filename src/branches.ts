@@ -39,6 +39,13 @@ export async function refToOidMap(
   return result;
 }
 
+export async function getTrunkRef(repo: Repository): Promise<Reference> {
+  return await Promise.resolve()
+    .then(() => repo.getReference("dev"))
+    .catch(() => repo.getReference("main"))
+    .catch(() => repo.getReference("master"));
+}
+
 export async function commitsBetween(tip: string, base: string) {
   const [stdout] = await execAsync(
     `git rev-list --ancestry-path ${base}..${tip}`
