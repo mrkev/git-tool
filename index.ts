@@ -5,9 +5,10 @@ import nodegit from "nodegit";
 import chalk from "chalk";
 import { spawn } from "child_process";
 import { execAsync } from "./src/exec";
-import { oidToRefMap } from "./src/branches";
+import { leastCommonAncestor, oidToRefMap } from "./src/branches";
 import { ggBranch } from "./src/gg-branch";
 import { getRepo } from "./src/repo";
+import { RefDeps } from "./src/RefDeps";
 
 const program = new Command();
 program.version("0.0.1");
@@ -175,7 +176,14 @@ program
   .command("test")
   .description("just testing stuff for development")
   .action(async () => {
-    console.log(process.stdout.columns, typeof process.stdout.columns);
+    const repo = await getRepo();
+    const refdeps = new RefDeps(repo);
+    // console.log(await leastCommonAncestor("two", "main"));
+
+    const headRef = await repo.head();
+    const heaBranchName = headRef.shorthand();
+
+    console.log(await refdeps.parentForBranch(heaBranchName));
   });
 
 program.parse(process.argv);

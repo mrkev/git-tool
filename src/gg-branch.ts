@@ -10,6 +10,7 @@ import nodegit from "nodegit";
 import en from "javascript-time-ago/locale/en";
 import TimeAgo from "javascript-time-ago";
 import CustomListPrompt from "./CustomListPrompt";
+import { RefDeps } from "./RefDeps";
 
 inquirer.registerPrompt("custom-list", CustomListPrompt);
 
@@ -77,11 +78,14 @@ export async function ggBranch(branch: string | null) {
 export async function showBranchList(repo: nodegit.Repository): Promise<void> {
   const locals = await localBranches(repo);
 
+  const refdeps = new RefDeps(repo);
+
   const results = (
     await Promise.all(
       locals.map(async (branch) => {
         const oid = branch.target().tostrS();
         const commit = await nodegit.Commit.lookup(repo, oid);
+        const parent = await refdeps.parentForBranch(branch.shorthand());
 
         return {
           sha: oid,
@@ -89,6 +93,8 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
           shorthand: branch.shorthand(),
           message: commit.message().trim().split(EOL)[0],
           isHead: branch.isHead(),
+          parentBranch: parent.branchName,
+          parentHash: parent.hash,
           branch,
         };
       })
@@ -113,7 +119,15 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
   const COMMANDER_LIST_INDICATOR_LENGTH = 2;
 
   const choices = results.map(
-    ({ sha: fullSha, date, shorthand, message, branch, isHead }) => {
+    ({
+      sha: fullSha,
+      date,
+      shorthand,
+      message,
+      branch,
+      isHead,
+      parentBranch,
+    }) => {
       const h = isHead ? "*" : " ";
       const sha = chalk.dim(fullSha.substring(0, 5));
       const bname = chalk.green(shorthand);
@@ -123,7 +137,13 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
         .padEnd(longestTimeLen);
       const msg = message.trim();
 
-      let name = `${h} ${tAgo} ${sha} ${bname}`;
+      // shorthand === parentBranch on trunk. main is root node and parent of itself
+      const parent =
+        parentBranch === null || shorthand === parentBranch
+          ? ""
+          : chalk.gray(" \u{2192} ") + chalk.green(parentBranch);
+
+      let name = `${h} ${tAgo} ${sha} ${bname}${parent}`;
 
       const widthWithoutMsg =
         COMMANDER_LIST_INDICATOR_LENGTH + 1 + stripAnsi(name).length;
