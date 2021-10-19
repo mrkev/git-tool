@@ -40,13 +40,10 @@ export class RefDeps {
     if (ancestorWithTrunkOid === trunkOid) {
       const commits = await commitsBetween(branchName, TRUNK);
 
-      console.log(commits);
-
       // start at i=len-2 to skip the tip commit: the ref we're checking
       // i = 0 is TRUNK, so worst case we'll end on TRUNK and return that
       // as the parent.
       for (let i = commits.length - 2; i > 0; i--) {
-        console.log("iii", i);
         const commit = commits[i];
         const refs = oidToRefs.get(commit);
         if (refs) {
