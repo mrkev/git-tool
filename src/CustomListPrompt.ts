@@ -19,7 +19,7 @@ import { Interface as ReadlineInterface } from "readline";
 import Choices from "inquirer/lib/objects/choices";
 import Choice from "inquirer/lib/objects/choice";
 import Separator from "inquirer/lib/objects/separator";
-import { showOnGithub } from "./customListActions";
+import { deleteBranches, showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";
 type KeypressKey = {
@@ -59,9 +59,13 @@ export default class CustomListPrompt extends Prompt {
 
   protected mode: ComponentMode = "list";
 
+  // message that renders until next action on list
+  private listMessage: string = "";
+
   // When on prompt mode, what gets called when done
   private promptCallback: ((answer: boolean) => void) | null = null;
   private promptQuestion: string = "";
+  private promptInput: string = "";
 
   constructor(
     questions: inquirer.Question[],
@@ -107,6 +111,7 @@ export default class CustomListPrompt extends Prompt {
   }
 
   onKeypress = (char: string, key: KeypressKey): void => {
+    this.listMessage = "";
     switch (this.mode) {
       case "list":
         this.onListKeypress(char, key);
@@ -184,7 +189,49 @@ export default class CustomListPrompt extends Prompt {
     this.render();
   }
 
-  onPromptKeypress(char: string, key: KeypressKey): void {}
+  onPromptKeypress(char: string, key: KeypressKey): void {
+    switch (key.name) {
+      case "backspace":
+        if (this.commandInput.length === 0) {
+          break;
+        }
+        this.commandInput = this.commandInput.slice(0, -1);
+        this.render();
+
+        break;
+      case "escape":
+        this.setMode("list");
+        this.promptInput = "";
+        break;
+
+      case "return":
+        if (!this.promptCallback) {
+          throw new Error("No prompt callback");
+        }
+        const answer =
+          this.promptInput.toLowerCase() === "y"
+            ? true
+            : this.promptInput.toLowerCase() === "n"
+            ? false
+            : "invalid";
+
+        if (answer !== "invalid") {
+          this.promptInput = "";
+          this.promptCallback(answer);
+          return;
+        }
+
+        this.promptInput = "";
+        this.render();
+        break;
+
+      default:
+        if (char != null && key.name !== "return") {
+          this.promptInput += char;
+          this.render();
+        }
+    }
+  }
 
   onCommandKeypress(char: string, key: KeypressKey): void {
     switch (key.name) {
@@ -270,10 +317,18 @@ export default class CustomListPrompt extends Prompt {
             return choice;
           });
 
-          const answer = await this.confirm(
-            `delete ${branches.length} branches?`,
-            (answer) => console.log("ANSER", answer)
+          const confirmed = await this.confirmAsync(
+            `delete ${branches.length} branches?`
           );
+
+          if (confirmed) {
+            await deleteBranches(branches);
+            this.listMessage = `deleted ${branches.length} branches`;
+          } else {
+            this.listMessage = `didn't delete ${branches.length} branches`;
+          }
+          this.setMode("list");
+          this.render();
         }
         break;
 
@@ -301,7 +356,16 @@ export default class CustomListPrompt extends Prompt {
     }
   }
 
-  async confirm(question: string, cb: (answer: boolean) => void) {
+  private async confirmAsync(question: string): Promise<boolean> {
+    return new Promise((res) => {
+      this.setMode("prompt");
+      this.promptCallback = res;
+      this.promptQuestion = question;
+      this.render();
+    });
+  }
+
+  private confirm(question: string, cb: (answer: boolean) => void) {
     this.setMode("prompt");
     this.promptCallback = cb;
     this.promptQuestion = question;
@@ -367,10 +431,12 @@ export default class CustomListPrompt extends Prompt {
 
     // Line for commands
     if (this.mode === "list") {
-      message += "\n";
-    } else {
+      message += "\n" + chalk.dim(this.listMessage);
+    } else if (this.mode === "command") {
       // const dimMessage = "(q: quit, /: search)";
       message += "\n:" + this.commandInput;
+    } else if (this.mode === "prompt") {
+      message += `\n${this.promptQuestion} (y/N):` + this.promptInput;
     }
 
     this.screen.render(message, "");

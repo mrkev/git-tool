@@ -8,3 +8,11 @@ export async function showOnGithub(prs: Array<nodegit.Reference>) {
     process.stderr.write(err);
   }
 }
+
+export async function deleteBranches(brs: Array<nodegit.Reference>) {
+  for (const br of brs) {
+    const [out, err] = await execAsync(`echo "will delete ${br.shorthand()}"`);
+    process.stdout.write(out);
+    process.stderr.write(err);
+  }
+}
