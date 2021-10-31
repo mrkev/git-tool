@@ -20,6 +20,16 @@ import Choices from "inquirer/lib/objects/choices";
 import Choice from "inquirer/lib/objects/choice";
 import Separator from "inquirer/lib/objects/separator";
 
+type ComponentMode = "list" | "command" | "prompt";
+type KeypressKey = {
+  sequence: string;
+  name: string;
+  ctrl: boolean;
+  meta: boolean;
+  shift: boolean;
+  code: string;
+};
+
 export default class CustomListPrompt extends Prompt {
   /**
    * Resolves the value of the prompt.
@@ -46,7 +56,7 @@ export default class CustomListPrompt extends Prompt {
    */
   protected paginator: Paginator;
 
-  protected mode: "list" | "command" = "list";
+  protected mode: ComponentMode = "list";
 
   constructor(
     questions: inquirer.Question[],
@@ -91,9 +101,36 @@ export default class CustomListPrompt extends Prompt {
     });
   }
 
-  /**
-   * Start the Inquiry session
-   */
+  onKeypress = (char: string, key: KeypressKey): void => {
+    switch (this.mode) {
+      case "list":
+        this.onListKeypress(char, key);
+        break;
+      case "command":
+        this.onCommandKeypress(char, key);
+        break;
+      case "prompt":
+        this.onPromptKeypress(char, key);
+        break;
+    }
+  };
+
+  _register() {
+    process.stdin.on("keypress", this.onKeypress);
+  }
+
+  _unregister() {
+    process.stdin.off("keypress", this.onKeypress);
+  }
+
+  _run(cb: (value: any) => void): this {
+    this.done = cb;
+    this._register();
+    // Init the prompt
+    cliCursor.hide();
+    this.render();
+    return this;
+  }
 
   commandInput: string = "";
   executeCommand() {
@@ -125,165 +162,114 @@ export default class CustomListPrompt extends Prompt {
     this.commandInput = "";
   }
 
-  private setMode(mode: "command" | "list"): void {
+  private setMode(mode: ComponentMode): void {
     this.mode = mode;
-    if (mode === "command") {
-      cliCursor.show();
-    } else {
-      this.commandInput = "";
-      cliCursor.hide();
+    switch (mode) {
+      case "command":
+        cliCursor.show();
+        break;
+      case "list":
+        this.commandInput = "";
+        cliCursor.hide();
+        break;
+      case "prompt":
+        cliCursor.show();
+        break;
     }
     this.render();
   }
 
-  onKeypress = (
-    char: string,
-    key: {
-      sequence: string;
-      name: string;
-      ctrl: boolean;
-      meta: boolean;
-      shift: boolean;
-      code: string;
-    }
-  ): void => {
-    if (char === "p") {
-      process.stderr.write(this.mode + "\n\n\n\n\n\n");
-    }
+  onPromptKeypress(char: string, key: KeypressKey): void {}
 
-    // Command mode
-    if (this.mode === "command") {
-      switch (key.name) {
-        case "backspace":
-          if (this.commandInput.length === 0) {
-            break;
-          }
+  onCommandKeypress(char: string, key: KeypressKey): void {
+    switch (key.name) {
+      case "backspace":
+        if (this.commandInput.length === 0) {
+          break;
+        }
 
-          this.commandInput = this.commandInput.slice(0, -1);
+        this.commandInput = this.commandInput.slice(0, -1);
+        this.render();
+
+        break;
+      case "escape":
+        this.setMode("list");
+        break;
+
+      case "return":
+        this.executeCommand();
+        break;
+
+      default:
+        if (char != null && key.name !== "return") {
+          this.commandInput += char;
           this.render();
-
-          break;
-        case "escape":
-          this.setMode("list");
-          break;
-
-        case "return":
-          this.executeCommand();
-          break;
-
-        default:
-          if (char != null && key.name !== "return") {
-            this.commandInput += char;
-            this.render();
-          }
-      }
-
-      // we might've changed this.mode
-      // so short circuit the guard for "list" below
-      return;
+        }
     }
-
-    // List mode
-    if (this.mode === "list") {
-      // console.log(key);
-      switch (key.name) {
-        // Movement
-        case "down":
-        case "j":
-          this.onDownKey();
-          break;
-        case "up":
-        case "k":
-          this.onUpKey();
-          break;
-
-        // Select/mark a
-        case "s":
-          if (this.marked.has(this.selected)) {
-            this.marked.delete(this.selected);
-          } else {
-            this.marked.add(this.selected);
-          }
-          this.render();
-          break;
-
-        // Space "resets the camera" and selects the default option
-        case "space":
-          this.selected = this.defaultSelected;
-          this.render();
-          break;
-
-        // Q quits immediately
-        case "q":
-          process.exit(0);
-          break;
-
-        // Esc enters command mode
-        case "escape":
-          this.setMode("command");
-          break;
-
-        case "return":
-          const value = this.getCurrentValue();
-          // I think I copied this correctly?
-          const filtered = (this.opt.filter as any)(value, this.answers);
-          // .catch(
-          //   (err: any) => err
-          // );
-          this.onSubmit(filtered);
-
-        default:
-          break;
-      }
-    }
-  };
-
-  _register() {
-    process.stdin.on("keypress", this.onKeypress);
   }
 
-  _unregister() {
-    process.stdin.off("keypress", this.onKeypress);
-  }
+  onListKeypress(char: string, key: KeypressKey): void {
+    // console.log(key);
+    switch (key.name) {
+      // Movement
+      case "down":
+      case "j":
+        this.onDownKey();
+        this.render();
+        break;
+      case "up":
+      case "k":
+        this.onUpKey();
+        this.render();
+        break;
 
-  _run(cb: (value: any) => void) {
-    this.done = cb;
+      // Select/mark a branch
+      case "s":
+        if (this.marked.has(this.selected)) {
+          this.marked.delete(this.selected);
+        } else {
+          this.marked.add(this.selected);
+        }
+        this.render();
+        break;
 
-    const self = this;
-    this._register();
+      // Space "resets the camera" and selects the default branch
+      case "space":
+        this.selected = this.defaultSelected;
+        this.render();
+        break;
 
-    const events = observe(this.rl);
-    // events.normalizedUpKey
-    //   .pipe(takeUntil(events.line))
-    //   .forEach(this.onUpKey.bind(this));
-    // events.normalizedDownKey
-    //   .pipe(takeUntil(events.line))
-    //   .forEach(this.onDownKey.bind(this));
-    // events.numberKey
-    //   .pipe(takeUntil(events.line))
-    //   .forEach(this.onNumberKey.bind(this) as any);
+      // [B]rowse the pr for the branch on github
+      case "o":
+        // exec('hub pr show')
+        break;
 
-    // events.line
-    //   .pipe(
-    //     // This is why this is here:
-    //     // https://github.com/SBoudrias/Inquirer.js/issues/395
-    //     // I haven't tested this with multiple questions, but
-    //     // I don't think I need multiple questions either
-    //     take(1),
-    //     map(this.getCurrentValue.bind(this)),
-    //     flatMap((value: any) =>
-    //       runAsync(self.opt.filter)(value, self.answers).catch(
-    //         (err: any) => err
-    //       )
-    //     )
-    //   )
-    //   .forEach(this.onSubmit.bind(this));
+      // Q quits immediately
+      case "q":
+        process.exit(0);
+        break;
 
-    // Init the prompt
-    cliCursor.hide();
-    this.render();
+      // d deletes branches
+      case "d":
+        break;
 
-    return this;
+      // Esc enters command mode
+      case "escape":
+        this.setMode("command");
+        break;
+
+      case "return":
+        const value = this.getCurrentValue();
+        // I think I copied this correctly?
+        const filtered = (this.opt.filter as any)(value, this.answers);
+        // .catch(
+        //   (err: any) => err
+        // );
+        this.onSubmit(filtered);
+
+      default:
+        break;
+    }
   }
 
   /**
@@ -294,7 +280,7 @@ export default class CustomListPrompt extends Prompt {
     let message = this.getQuestion();
 
     if (this.firstRender) {
-      message += chalk.dim("(Use arrow keys)");
+      message += chalk.dim("(Use vim navigation)");
       this.firstRender = false;
     }
 
@@ -434,30 +420,14 @@ export default class CustomListPrompt extends Prompt {
    */
   onUpKey = (): void => {
     this.selected = incrementListIndex(this.selected, "up", this.opt);
-    this.render();
   };
 
   onDownKey = (): void => {
     this.selected = incrementListIndex(this.selected, "down", this.opt);
-    this.render();
-  };
-
-  onNumberKey = (input: number): void => {
-    if (input <= this.opt.choices.realLength) {
-      this.selected = input - 1;
-    }
-
-    this.render();
   };
 }
 
-/**
- * Function for rendering list choices
- * @param  {Number} pointer Position of the pointer
- * @return {String}         Rendered content
- */
-
-function incrementListIndex(current: any, dir: any, opt: any) {
+function incrementListIndex(current: number, dir: "up" | "down", opt: any) {
   const len = opt.choices.realLength;
   const shouldLoop = "loop" in opt ? Boolean(opt.loop) : true;
   if (dir === "up") {
