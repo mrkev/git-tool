@@ -19,6 +19,7 @@ import { Interface as ReadlineInterface } from "readline";
 import Choices from "inquirer/lib/objects/choices";
 import Choice from "inquirer/lib/objects/choice";
 import Separator from "inquirer/lib/objects/separator";
+import { showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";
 type KeypressKey = {
@@ -57,6 +58,10 @@ export default class CustomListPrompt extends Prompt {
   protected paginator: Paginator;
 
   protected mode: ComponentMode = "list";
+
+  // When on prompt mode, what gets called when done
+  private promptCallback: ((answer: boolean) => void) | null = null;
+  private promptQuestion: string = "";
 
   constructor(
     questions: inquirer.Question[],
@@ -208,7 +213,7 @@ export default class CustomListPrompt extends Prompt {
     }
   }
 
-  onListKeypress(char: string, key: KeypressKey): void {
+  async onListKeypress(char: string, key: KeypressKey): Promise<void> {
     // console.log(key);
     switch (key.name) {
       // Movement
@@ -241,16 +246,40 @@ export default class CustomListPrompt extends Prompt {
 
       // [B]rowse the pr for the branch on github
       case "o":
-        // exec('hub pr show')
+        {
+          const indices =
+            this.marked.size > 0 ? [...this.marked] : [this.selected];
+          const branches = indices.map((i: number) => {
+            const choice = this.opt.choices.getChoice(i).value;
+            return choice;
+          });
+
+          await showOnGithub(branches);
+          console.log("shown!");
+          process.exit(0);
+        }
+        break;
+
+      // d deletes branches
+      case "d":
+        {
+          const indices =
+            this.marked.size > 0 ? [...this.marked] : [this.selected];
+          const branches = indices.map((i: number) => {
+            const choice = this.opt.choices.getChoice(i).value;
+            return choice;
+          });
+
+          const answer = await this.confirm(
+            `delete ${branches.length} branches?`,
+            (answer) => console.log("ANSER", answer)
+          );
+        }
         break;
 
       // Q quits immediately
       case "q":
         process.exit(0);
-        break;
-
-      // d deletes branches
-      case "d":
         break;
 
       // Esc enters command mode
@@ -270,6 +299,13 @@ export default class CustomListPrompt extends Prompt {
       default:
         break;
     }
+  }
+
+  async confirm(question: string, cb: (answer: boolean) => void) {
+    this.setMode("prompt");
+    this.promptCallback = cb;
+    this.promptQuestion = question;
+    this.render();
   }
 
   /**
