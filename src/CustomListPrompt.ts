@@ -481,7 +481,8 @@ export default class CustomListPrompt extends Prompt {
         const isSelected = i - separatorOffset === pointer;
         let line = (isSelected ? figures.pointer + " " : "  ") + choice.name;
         if (isSelected) {
-          line = chalk.cyan(line);
+          const listDisabled = this.mode !== "list";
+          line = listDisabled ? chalk.grey(line) : chalk.cyan(line);
         }
 
         if (marked.has(i)) {
