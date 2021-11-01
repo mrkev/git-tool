@@ -266,12 +266,12 @@ export default class CustomListPrompt extends Prompt {
       // Movement
       case "down":
       case "j":
-        this.onDownKey();
+        this.selected = incrementListIndex(this.selected, "down", this.opt);
         this.render();
         break;
       case "up":
       case "k":
-        this.onUpKey();
+        this.selected = incrementListIndex(this.selected, "up", this.opt);
         this.render();
         break;
 
@@ -498,17 +498,14 @@ export default class CustomListPrompt extends Prompt {
   /**
    * When user press `enter` key
    */
-
   onSubmit(value: any): void {
     this.status = "answered";
-
     // Rerender prompt
     this.render();
-
     this.screen.done();
     cliCursor.show();
     if (this.done == null) {
-      throw new Error("No finall callback!");
+      throw new Error("No final callback!");
     } else {
       this.done(value);
     }
@@ -517,17 +514,6 @@ export default class CustomListPrompt extends Prompt {
   getCurrentValue(): void {
     return this.opt.choices.getChoice(this.selected).value;
   }
-
-  /**
-   * When user press a key
-   */
-  onUpKey = (): void => {
-    this.selected = incrementListIndex(this.selected, "up", this.opt);
-  };
-
-  onDownKey = (): void => {
-    this.selected = incrementListIndex(this.selected, "down", this.opt);
-  };
 }
 
 function incrementListIndex(current: number, dir: "up" | "down", opt: any) {
