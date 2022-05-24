@@ -4,7 +4,7 @@ import { Command } from "commander";
 import nodegit from "nodegit";
 import chalk from "chalk";
 import { spawn } from "child_process";
-import { execAsync } from "./src/exec";
+import { execAsync, spawnStep } from "./src/exec";
 import { getTrunkRef, leastCommonAncestor, oidToRefMap } from "./src/branches";
 import { ggBranch } from "./src/gg-branch";
 import { getRepo } from "./src/repo";
@@ -22,12 +22,56 @@ program
   .action((branch?: string) => ggBranch(branch || null));
 
 program
-  .command("commit [branchname] <message>")
-  .description("creates a branch/commit")
-  .action((branchname, message) => {
-    // if not on master:
-    // git checkout -b new-branch
-    // git commit -m "message"
+  .command("send <branchname> <message>")
+  .alias("s")
+  .description("creates and pushes a branch/commit")
+  .action(async (branchname, message) => {
+    const [currRaw] = await execAsync(`git rev-parse --abbrev-ref HEAD`);
+    const currBranch = currRaw.trim();
+    await spawnStep(`git checkout -b ${branchname}`);
+    await spawnStep(`git commit -m "${message}"`);
+    const [msg, err] = await execAsync(
+      `git push --set-upstream origin ${branchname}`
+    );
+
+    // remote messages get printed to stderr for some reason
+    const lines = err.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf("Create a pull request for") === -1) {
+        console.log(
+          "out",
+          lines[i],
+          lines[i].indexOf("Create a pull request for")
+        );
+
+        continue;
+      }
+      const match = /(https?.*)\/pull\/new/gm.exec(lines[i + 1]);
+      if (!match) {
+        throw new Error("this isn't expected!");
+      }
+      console.log(
+        `Create a pull request to ${chalk.green(currBranch)} <- ${chalk.green(
+          branchname
+        )}:`
+      );
+      console.log(
+        "    " +
+          chalk.underline(
+            match[1] + `/compare/${currBranch}...${branchname}?expand=1\n`
+          )
+      );
+      break;
+    }
+  });
+
+program
+  .command("amend")
+  .alias("a")
+  .description("amends/adds to the current diff")
+  .action(async () => {
+    // TODO: check rebase status
+    await spawnStep(`git commit --amend && git push --force`);
   });
 
 // program
