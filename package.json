@@ -5,7 +5,7 @@
     "gg": "./dist/bundle.js"
   },
   "scripts": {
-    "build": "rollup --config rollup.config.js",
+    "build": "rollup --config --bundleConfigAsCjs rollup.config.js",
     "gg": "npm run build && node ./dist/bundle.js",
     "prepack": "npm run build"
   },
@@ -13,22 +13,19 @@
   "dependencies": {
     "@types/inquirer": "^7.3.3",
     "@types/javascript-time-ago": "^2.0.3",
-    "@types/keypress": "^2.0.30",
-    "@types/node": "^16.7.1",
-    "@types/nodegit": "^0.27.3",
-    "ansi-escapes": "^4.3.2",
+    "@types/node": "^20.3.1",
+    "@types/nodegit": "^0.28.3",
     "chalk": "^4.1.2",
-    "commander": "^8.1.0",
+    "commander": "^11.0.0",
     "inquirer": "^8.1.2",
-    "javascript-time-ago": "^2.3.8",
-    "keypress": "^0.2.1",
+    "javascript-time-ago": "^2.5.9",
     "nodegit": "^0.28.0-alpha.21",
-    "rollup": "^2.56.3"
+    "rollup": "^3.25.1"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.1",
-    "@types/lodash": "^4.14.173",
-    "rollup-plugin-natives": "^0.7.5",
+    "@types/lodash": "^4.14.195",
+    "rollup-plugin-natives": "^0.7.6",
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.3"
