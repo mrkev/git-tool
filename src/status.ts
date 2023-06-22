@@ -25,6 +25,10 @@ function statusToText(status: nodegit.StatusFile): [string, chalk.Chalk] {
     words.push("IGNORED");
     color = chalk.red;
   }
+  if (status.isDeleted()) {
+    words.push("DELETED");
+    color = chalk.red;
+  }
 
   return [words.join(" "), color];
 }
