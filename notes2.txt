@@ -1,0 +1,80 @@
+ALL THIS WOULD BE ON "BRANCH MASTER"//////////////////////
+
+commit 9693883bf7829f47e7b6aaa01824313973d3cb5a (HEAD -> master, origin/master)
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-10T01:00:27.000Z
+
+    add repo discoverability
+
+commit d20c0d5b74c6918b3608b78e6a2256950bb7af4b 
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-10T00:53:14.000Z
+
+    add rollup as a dependency
+
+commit aac9270000e0c7aa0d15d4b124848ab3e30ee7cd 
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-10T00:42:05.000Z
+
+    add status before branch list
+
+commit f8fc48326efd39b8146057377b272c4007e73bec 
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-10T00:14:14.000Z
+
+    add branch creation
+
+commit e9ca25af3d80d6841ac1c0750c786ab7acd45c56 
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-09T23:39:08.000Z
+
+    add rollup build
+
+commit 7adcd9201f1c561692dad011626c753c32f2e9eb 
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-05T08:07:21.000Z
+
+    add gg checkout [branchname]
+
+//////////////////////////////////////////////////
+
+/// AND THIS WOULD BE ON "BRANCH TEST"
+
+commit 5cb08edd09e2e733854ca480e9c1e2a0ff131feb (test)
+Author: Kevin Chavez <mr.kev@me.com>
+Date: 2021-09-05T07:58:52.000Z
+
+    initial commit, checkout works
+
+
+
+
+BRANCH => commit in HG. Exept I guess instead of bieng represented by a single sha
+it'll be a list, (although we can just show beggining..end)
+
+[ ] master (96938..7adcd)
+ |
+[ ] test (5cb08)
+
+
+
+ 
+[ ] dev
+ |
+ | [ ] branch2
+ |  |
+ | [ ] test2
+ | /
+[ ] * (c92s4)
+ |
+ | [ ] branch2
+ |  |
+ | [ ] test2
+ | /
+ |
+ | [ ] branch
+ |  |
+ | [ ] test
+ | /
+[ ] * (3cv2a)
+ |

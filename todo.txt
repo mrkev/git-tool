@@ -1,0 +1,59 @@
+Interactive
+- delete acutally deletes 
+
+Commands
+- mv-rebase
+- mv-unstage 
+
+
+
+
+
+
+
+
+
+
+// checkAutocomplete(process.argv);
+// // TODO
+// function checkAutocomplete(argv: string[]) {
+//   if (argv[2] === "--completion") {
+//     // generate completion script
+//     // we define a completion function for command named "clock"
+//     // which call (clock --compgen <fragment> <prevWord> <line>) to get candidate words
+//     // the last "-- ${COMP_WORDS[COMP_CWORD]}" argument
+//     // tells compgen to filter candidates by
+//     // prefix which is the fragment that is currently being working on
+//     process.stdout.write(`
+//       _gg_completion() {
+//         COMPREPLY=( $(compgen -W '$(gg --compgen "\${COMP_CWORD}" "\${COMP_WORDS[COMP_CWORD-1]}" "\${COMP_LINE}")' -- "\${COMP_WORDS[COMP_CWORD]}") )
+//       }
+//       complete -F _gg_completion gg
+//     `);
+//     // exit process immediately after completion request
+//     process.exit(0);
+//   } else if (argv[2] === "--compgen") {
+//     console.log("foobar");
+//     process.exit(0);
+//     // fragment is the above "$COMP_CWORD" telling us
+//     // which word is being worked on
+//     const fragment = parseInt(argv[3], 10);
+//     if (fragment === 1) {
+//       // for the 1st position we return 3 possible option names
+//       process.stdout.write("--mode --help --version");
+//     } else if (fragment === 2) {
+//       // for the 2nd position we return 3 possible candidates
+//       const prevWord = argv[4];
+//       // line is the exact text users see from the command line
+//       // it contains full context information
+//       // which can be very useful for more complex autocompletion cases
+//       // const line = argv[5];
+//       if (prevWord === "--mode") {
+//         process.stdout.write("12h 24h");
+//       }
+//     }
+//     // otherwise we output nothing which means nothing to suggest
+//     // exit process immediately after completion request
+//     process.exit(0);
+//   }
+// }
