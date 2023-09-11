@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
-import nodegit from "nodegit";
 import chalk from "chalk";
 import { spawn } from "child_process";
-import { execAsync, spawnStep } from "./src/exec";
-import { getTrunkRef, leastCommonAncestor, oidToRefMap } from "./src/branches";
-import { ggBranch } from "./src/gg-branch";
-import { getRepo } from "./src/repo";
+import { Command } from "commander";
+import nodegit from "nodegit";
 import { RefDeps } from "./src/RefDeps";
+import { getTrunkRef, oidToRefMap } from "./src/branches";
+import { ggAmend, ggDelmerged, ggGo, ggSync } from "./src/cmd/gg";
+import { ggBranch } from "./src/cmd/gg-branch";
+import { ggSend } from "./src/cmd/gg-send";
+import { execAsync } from "./src/exec";
+import { getRepo } from "./src/repo";
 
 const program = new Command();
 program.version("0.0.1");
@@ -22,57 +24,26 @@ program
   .action((branch?: string) => ggBranch(branch || null));
 
 program
+  .command("go <message>")
+  .description("syncs main")
+  .action(async (message) => ggGo(message));
+
+program
   .command("send <branchname> <message>")
   .alias("s")
   .description("creates and pushes a branch/commit")
-  .action(async (branchname, message) => {
-    const [currRaw] = await execAsync(`git rev-parse --abbrev-ref HEAD`);
-    const currBranch = currRaw.trim();
-    await spawnStep(`git checkout -b ${branchname}`);
-    await spawnStep(`git commit -m "${message}"`);
-    const [msg, err] = await execAsync(
-      `git push --set-upstream origin ${branchname}`
-    );
-
-    // remote messages get printed to stderr for some reason
-    const lines = err.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].indexOf("Create a pull request for") === -1) {
-        console.log(
-          "out",
-          lines[i],
-          lines[i].indexOf("Create a pull request for")
-        );
-
-        continue;
-      }
-      const match = /(https?.*)\/pull\/new/gm.exec(lines[i + 1]);
-      if (!match) {
-        throw new Error("this isn't expected!");
-      }
-      console.log(
-        `Create a pull request to ${chalk.green(currBranch)} <- ${chalk.green(
-          branchname
-        )}:`
-      );
-      console.log(
-        "    " +
-          chalk.underline(
-            match[1] + `/compare/${currBranch}...${branchname}?expand=1\n`
-          )
-      );
-      break;
-    }
-  });
+  .action(async (branchname, message) => ggSend(branchname, message));
 
 program
   .command("amend")
   .alias("a")
   .description("amends/adds to the current diff")
-  .action(async () => {
-    // TODO: check rebase status
-    await spawnStep(`git commit --amend && git push --force`);
-  });
+  .action(async () => ggAmend());
+
+program
+  .command("sync")
+  .description("syncs main")
+  .action(async () => ggSync());
 
 // program
 //   .command("move <ref> <dest>")
@@ -86,22 +57,7 @@ program
 program
   .command("delmerged")
   .description("rebases a commit/branch somewhere else")
-  .action(async () => {
-    let result, err;
-    // cleans local refs for merged branches
-    [result, err] = await execAsync(
-      `gh branch --merged` +
-        ` | egrep -v "(^\*|master|main|dev)"` +
-        ` | xargs git branch -d`
-    );
-    process.stdout.write(result);
-    process.stderr.write(err);
-
-    // cleans remote refs for deleted or merged ? branches
-    [result, err] = await execAsync(`gh remote prune origin`);
-    process.stdout.write(result);
-    process.stderr.write(err);
-  });
+  .action(async () => ggDelmerged());
 
 program
   .command("log")
