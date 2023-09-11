@@ -41,3 +41,7 @@ export async function ggDelmerged() {
   process.stdout.write(result);
   process.stderr.write(err);
 }
+
+// git branch -m master main
+// open https://github.com/mrkev/git-tool/settings
+// git push origin --delete master

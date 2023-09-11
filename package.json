@@ -21,15 +21,15 @@
     "javascript-time-ago": "^2.5.9",
     "nodegit": "^0.28.0-alpha.21",
     "omelette": "^0.4.17",
-    "rollup": "^3.25.1"
+    "rollup": "^3.29.1"
   },
   "devDependencies": {
-    "@rollup/plugin-typescript": "^11.1.1",
-    "@types/lodash": "^4.14.195",
+    "@rollup/plugin-typescript": "^11.1.3",
+    "@types/lodash": "^4.14.198",
     "@types/omelette": "^0.4.2",
-    "rollup-plugin-natives": "^0.7.6",
+    "rollup-plugin-natives": "^0.7.8",
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.3"
+    "typescript": "^5.2.2"
   }
 }
