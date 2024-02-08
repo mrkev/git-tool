@@ -37,7 +37,7 @@ export async function ggDelmerged() {
   process.stderr.write(err);
 
   // cleans remote refs for deleted or merged ? branches
-  [result, err] = await execAsync(`gh remote prune origin`);
+  [result, err] = await execAsync(`git remote prune origin`);
   process.stdout.write(result);
   process.stderr.write(err);
 }
