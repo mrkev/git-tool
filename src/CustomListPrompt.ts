@@ -2,7 +2,7 @@
  * `list` type prompt
  */
 
-import findIndex from "lodash/findIndex";
+import findIndex from "lodash/findIndex.js";
 
 import chalk from "chalk";
 import figures from "figures";
@@ -11,14 +11,14 @@ import cliCursor from "cli-cursor";
 // import runAsync from "run-async";
 // import { flatMap, map, take, takeUntil } from "rxjs/operators";
 import observe from "inquirer/lib/utils/events";
-import Paginator from "inquirer/lib/utils/paginator";
+import Paginator from "inquirer/lib/utils/paginator.js";
 
-import Prompt from "inquirer/lib/prompts/base";
+import Prompt from "inquirer/lib/prompts/base.js";
 import inquirer from "inquirer";
 import { Interface as ReadlineInterface } from "readline";
 import Choices from "inquirer/lib/objects/choices";
 import Choice from "inquirer/lib/objects/choice";
-import Separator from "inquirer/lib/objects/separator";
+import Separator from "inquirer/lib/objects/separator.js";
 import { deleteBranches, showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";

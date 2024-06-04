@@ -1,9 +1,9 @@
 import nodegit from "nodegit";
-import chalk from "chalk";
+import chalk, { ChalkInstance } from "chalk";
 
-function statusToText(status: nodegit.StatusFile): [string, chalk.Chalk] {
+function statusToText(status: nodegit.StatusFile): [string, ChalkInstance] {
   const words = [];
-  let color: chalk.Chalk = chalk.reset;
+  let color: ChalkInstance = chalk.reset;
 
   if (status.isNew()) {
     words.push("NEW");

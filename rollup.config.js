@@ -8,7 +8,7 @@ export default {
   output: {
     // dir: "dist",
     file: "dist/bundle.js",
-    format: "cjs",
+    format: "esm",
   },
   plugins: [
     preserveShebangs(),
