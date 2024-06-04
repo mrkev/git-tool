@@ -13,18 +13,19 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
+    "execa": "^8.0.1",
     "inquirer": "^8.1.2",
     "javascript-time-ago": "^2.5.9",
-    "nodegit": "^0.28.0-alpha.21",
+    "nodegit": "^0.28.0-alpha.26",
     "omelette": "^0.4.17"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/inquirer": "^7.3.3",
     "@types/javascript-time-ago": "^2.0.8",
+    "@types/lodash": "^4.14.198",
     "@types/node": "^20.3.1",
     "@types/nodegit": "^0.28.7",
-    "@types/lodash": "^4.14.198",
     "@types/omelette": "^0.4.2",
     "rollup": "^4.9.6",
     "rollup-plugin-natives": "^0.7.8",
