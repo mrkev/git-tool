@@ -4,6 +4,7 @@ import chalk from "chalk";
 import { spawn } from "child_process";
 import { Command } from "commander";
 import nodegit from "nodegit";
+import pkg from "./package.json";
 import { RefDeps } from "./src/RefDeps";
 import { getTrunkRef, oidToRefMap } from "./src/branches";
 import { ggAmend, ggDelmerged, ggGo, ggSync } from "./src/cmd/gg";
@@ -13,7 +14,7 @@ import { execAsync } from "./src/exec";
 import { getRepo } from "./src/repo";
 
 const program = new Command();
-program.version("0.0.1");
+program.version(pkg.version);
 
 program.action(() => ggBranch(null));
 

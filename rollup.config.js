@@ -2,6 +2,7 @@
 import nativePlugin from "rollup-plugin-natives";
 import typescript from "@rollup/plugin-typescript";
 import { preserveShebangs } from "rollup-plugin-preserve-shebangs";
+import json from "@rollup/plugin-json";
 
 export default {
   input: "index.ts",
@@ -13,6 +14,7 @@ export default {
   plugins: [
     preserveShebangs(),
     typescript(),
+    json(),
     nativePlugin({
       // Where we want to physically put the extracted .node files
       copyTo: "dist/libs",
