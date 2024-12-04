@@ -13,10 +13,13 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
+    "cli-cursor": "^5.0.0",
     "commander": "^11.0.0",
     "execa": "^9.1.0",
+    "figures": "^6.1.0",
     "inquirer": "^8.1.2",
     "javascript-time-ago": "^2.5.10",
+    "lodash": "^4.17.21",
     "nodegit": "^0.28.0-alpha.26",
     "omelette": "^0.4.17"
   },
@@ -33,5 +36,6 @@
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
-  }
+  },
+  "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab"
 }
