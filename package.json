@@ -15,10 +15,10 @@
     "chalk": "^5.3.0",
     "cli-cursor": "^5.0.0",
     "commander": "^11.0.0",
-    "execa": "^9.1.0",
+    "execa": "^9.5.1",
     "figures": "^6.1.0",
     "inquirer": "^8.1.2",
-    "javascript-time-ago": "^2.5.10",
+    "javascript-time-ago": "^2.5.11",
     "lodash": "^4.17.21",
     "nodegit": "^0.28.0-alpha.26",
     "omelette": "^0.4.17"
@@ -27,15 +27,15 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/inquirer": "^7.3.3",
     "@types/javascript-time-ago": "^2.0.8",
-    "@types/lodash": "^4.17.4",
+    "@types/lodash": "^4.17.13",
     "@types/node": "20.14.1",
     "@types/nodegit": "^0.28.7",
-    "@types/omelette": "^0.4.2",
-    "rollup": "^4.18.0",
+    "@types/omelette": "^0.4.4",
+    "rollup": "^4.28.0",
     "rollup-plugin-natives": "^0.7.8",
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.7.2"
   },
   "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab"
 }
