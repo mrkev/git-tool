@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { ggSync } from "./lib/gg";
+import { ggSync } from "../lib/gg";
 
 const program = new Command();
 

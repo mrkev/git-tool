@@ -1,6 +1,8 @@
 // rollup.config.js
 import json from "@rollup/plugin-json";
 import typescript from "@rollup/plugin-typescript";
+import { globSync } from "glob";
+import { basename } from "path";
 import nativePlugin from "rollup-plugin-natives";
 import { preserveShebangs } from "rollup-plugin-preserve-shebangs";
 
@@ -31,33 +33,15 @@ const plugins = [
   }),
 ];
 
+const cmds = globSync("src/cmd/gg*.ts").map((path) => basename(path, ".ts"));
+
 /** @type {import('rollup').RollupOptions} */
-export default [
-  {
-    input: "src/gg.ts",
-    output: {
-      // dir: "dist",
-      file: "dist/gg",
-      format: "esm",
-    },
-    plugins,
+export default cmds.map((cmd) => ({
+  input: `src/cmd/${cmd}.ts`,
+  output: {
+    // dir: "dist",
+    file: `dist/${cmd}`,
+    format: "esm",
   },
-  {
-    input: "src/gg-send.ts",
-    output: {
-      // dir: "dist",
-      file: "dist/gg-send",
-      format: "esm",
-    },
-    plugins,
-  },
-  {
-    input: "src/gg-sync.ts",
-    output: {
-      // dir: "dist",
-      file: "dist/gg-sync",
-      format: "esm",
-    },
-    plugins,
-  },
-];
+  plugins,
+}));

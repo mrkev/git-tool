@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { ggSend } from "./lib/gg-send";
+import { ggSend } from "../lib/gg-send";
 
 const program = new Command();
 
