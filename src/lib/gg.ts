@@ -32,9 +32,7 @@ export async function ggDelmerged() {
   let result, err;
   // cleans local refs for merged branches
   [result, err] = await execAsync(
-    `git branch --merged` +
-      ` | egrep -v "(^\*|master|main|dev)"` +
-      ` | xargs git branch -d`
+    `git branch --merged` + ` | egrep -v "(^\*|master|main|dev)"` + ` | xargs git branch -d`,
   );
   process.stdout.write(result);
   process.stderr.write(err);

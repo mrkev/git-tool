@@ -33,16 +33,13 @@ function statusToText(status: nodegit.StatusFile): [string, ChalkInstance] {
   return [words.join(" "), color];
 }
 
-export async function getStatusText(
-  repo: nodegit.Repository
-): Promise<Array<string>> {
+export async function getStatusText(repo: nodegit.Repository): Promise<Array<string>> {
   const statuses = await repo.getStatus();
 
   let longestPrefixLen = 0;
   for (let file of statuses) {
     const [words] = statusToText(file);
-    longestPrefixLen =
-      words.length > longestPrefixLen ? words.length : longestPrefixLen;
+    longestPrefixLen = words.length > longestPrefixLen ? words.length : longestPrefixLen;
   }
 
   return statuses.map(function (file) {

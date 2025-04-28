@@ -7,10 +7,7 @@ const HEAD_BRANCH_REGEX = /^\s*HEAD branch: (.*)$/m;
 export async function defaultBranch() {
   const { stdout: remote } = await $`git remote`;
   const { stdout: remoteShow } = await $`git remote show ${remote}`;
-  return nullthrows(
-    HEAD_BRANCH_REGEX.exec(remoteShow),
-    "failed to find default branch: no HEAD branch."
-  )[1].trim();
+  return nullthrows(HEAD_BRANCH_REGEX.exec(remoteShow), "failed to find default branch: no HEAD branch.")[1].trim();
 }
 
 export async function currentBranch() {

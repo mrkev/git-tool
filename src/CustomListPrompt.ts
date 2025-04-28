@@ -67,11 +67,7 @@ export default class CustomListPrompt extends Prompt {
   private promptQuestion: string = "";
   private promptInput: string = "";
 
-  constructor(
-    questions: inquirer.Question[],
-    rl: ReadlineInterface,
-    answers: inquirer.Answers
-  ) {
+  constructor(questions: inquirer.Question[], rl: ReadlineInterface, answers: inquirer.Answers) {
     super(questions, rl, answers);
 
     if (!this.opt.choices) {
@@ -84,17 +80,10 @@ export default class CustomListPrompt extends Prompt {
     const def = this.opt.default;
 
     // If def is a Number, then use as index. Otherwise, check for value.
-    if (
-      typeof def === "number" &&
-      def >= 0 &&
-      def < this.opt.choices.realLength
-    ) {
+    if (typeof def === "number" && def >= 0 && def < this.opt.choices.realLength) {
       this.selected = def;
     } else if (!(typeof def === "number") && def != null) {
-      const index = findIndex(
-        this.opt.choices.realChoices,
-        ({ value }: any) => value === def
-      );
+      const index = findIndex(this.opt.choices.realChoices, ({ value }: any) => value === def);
       this.selected = Math.max(index, 0);
     }
 
@@ -103,8 +92,7 @@ export default class CustomListPrompt extends Prompt {
     // Make sure no default is set (so it won't be printed)
     this.opt.default = null;
 
-    const shouldLoop =
-      (this.opt as any).loop === undefined ? true : (this.opt as any).loop;
+    const shouldLoop = (this.opt as any).loop === undefined ? true : (this.opt as any).loop;
     this.paginator = new (Paginator as any)(this.screen, {
       isInfinite: shouldLoop,
     });
@@ -158,9 +146,7 @@ export default class CustomListPrompt extends Prompt {
         break;
 
       case "help":
-        process.stderr.write(
-          "commands: q (quit)qm (print mode)\n" + "immediates: "
-        );
+        process.stderr.write("commands: q (quit)qm (print mode)\n" + "immediates: ");
 
       case "pull":
       // TODO: same as git checkout [selected branch]
@@ -209,11 +195,7 @@ export default class CustomListPrompt extends Prompt {
           throw new Error("No prompt callback");
         }
         const answer =
-          this.promptInput.toLowerCase() === "y"
-            ? true
-            : this.promptInput.toLowerCase() === "n"
-            ? false
-            : "invalid";
+          this.promptInput.toLowerCase() === "y" ? true : this.promptInput.toLowerCase() === "n" ? false : "invalid";
 
         if (answer !== "invalid") {
           this.promptInput = "";
@@ -294,8 +276,7 @@ export default class CustomListPrompt extends Prompt {
       // [B]rowse the pr for the branch on github
       case "o":
         {
-          const indices =
-            this.marked.size > 0 ? [...this.marked] : [this.selected];
+          const indices = this.marked.size > 0 ? [...this.marked] : [this.selected];
           const branches = indices.map((i: number) => {
             const choice = this.opt.choices.getChoice(i).value;
             return choice;
@@ -310,16 +291,13 @@ export default class CustomListPrompt extends Prompt {
       // d deletes branches
       case "d":
         {
-          const indices =
-            this.marked.size > 0 ? [...this.marked] : [this.selected];
+          const indices = this.marked.size > 0 ? [...this.marked] : [this.selected];
           const branches = indices.map((i: number) => {
             const choice = this.opt.choices.getChoice(i).value;
             return choice;
           });
 
-          const confirmed = await this.confirmAsync(
-            `delete ${branches.length} branches?`
-          );
+          const confirmed = await this.confirmAsync(`delete ${branches.length} branches?`);
 
           if (confirmed) {
             await deleteBranches(branches);
@@ -392,14 +370,8 @@ export default class CustomListPrompt extends Prompt {
     }
 
     // Render list
-    const choicesStr = this.listRender(
-      this.opt.choices,
-      this.selected,
-      this.marked
-    );
-    const indexPosition = this.opt.choices.indexOf(
-      this.opt.choices.getChoice(this.selected) as any
-    );
+    const choicesStr = this.listRender(this.opt.choices, this.selected, this.marked);
+    const indexPosition = this.opt.choices.indexOf(this.opt.choices.getChoice(this.selected) as any);
     const realIndexPosition =
       (this.opt.choices as any).reduce((acc: number, value: any, i: number) => {
         // Dont count lines past the choice we are looking at
@@ -421,13 +393,7 @@ export default class CustomListPrompt extends Prompt {
         l = l.split("\n");
         return acc + l.length;
       }, 0) - 1;
-    message +=
-      "\n" +
-      (this.paginator as any).paginate(
-        choicesStr,
-        realIndexPosition,
-        (this.opt as any).pageSize
-      );
+    message += "\n" + (this.paginator as any).paginate(choicesStr, realIndexPosition, (this.opt as any).pageSize);
 
     // Line for commands
     if (this.mode === "list") {
@@ -446,17 +412,14 @@ export default class CustomListPrompt extends Prompt {
     let output = "";
     let separatorOffset = 0;
 
-    const filter =
-      this.commandInput[0] === "/" ? this.commandInput.substring(1) : "";
+    const filter = this.commandInput[0] === "/" ? this.commandInput.substring(1) : "";
 
     choices
       .filter(((choice: Choice<any> | Separator) => {
         if (filter === "") {
           return true;
         }
-        return (
-          !(choice instanceof Separator) && choice.short.indexOf(filter) > -1
-        );
+        return !(choice instanceof Separator) && choice.short.indexOf(filter) > -1;
       }) as any)
       .forEach((choice, i) => {
         if (choice.type === "separator") {
@@ -468,12 +431,7 @@ export default class CustomListPrompt extends Prompt {
         if (choice.disabled) {
           separatorOffset++;
           output += "  - " + choice.name;
-          output +=
-            " (" +
-            (typeof choice.disabled === "string"
-              ? choice.disabled
-              : "Disabled") +
-            ")";
+          output += " (" + (typeof choice.disabled === "string" ? choice.disabled : "Disabled") + ")";
           output += "\n";
           return;
         }

@@ -36,9 +36,7 @@ export async function ggBranch(branch: string | null) {
   }
 
   // Create branch
-  const branches = (await localBranches(repo)).map((branch) =>
-    branch.shorthand()
-  );
+  const branches = (await localBranches(repo)).map((branch) => branch.shorthand());
 
   if (branches.indexOf(branch) === -1) {
     const { create } = await inquirer.prompt([
@@ -97,19 +95,16 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
           parentHash: parent.hash,
           branch,
         };
-      })
+      }),
     )
-  ).sort(
-    ({ date: date1 }, { date: date2 }) => date2.valueOf() - date1.valueOf()
-  );
+  ).sort(({ date: date1 }, { date: date2 }) => date2.valueOf() - date1.valueOf());
 
   let longestTimeLen = 0;
   let headIndex = 0;
   for (let i = 0; i < results.length; i++) {
     const { date, isHead } = results[i];
     const tAgo = timeAgo.format(date).replace("minutes", "mins");
-    longestTimeLen =
-      tAgo.length > longestTimeLen ? tAgo.length : longestTimeLen;
+    longestTimeLen = tAgo.length > longestTimeLen ? tAgo.length : longestTimeLen;
     if (isHead) {
       headIndex = i;
     }
@@ -118,48 +113,32 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
   const COLUMNS = process.stdout.columns;
   const COMMANDER_LIST_INDICATOR_LENGTH = 2;
 
-  const choices = results.map(
-    ({
-      sha: fullSha,
-      date,
-      shorthand,
-      message,
-      branch,
-      isHead,
-      parentBranch,
-    }) => {
-      const h = isHead ? "*" : " ";
-      const sha = chalk.dim(fullSha.substring(0, 5));
-      const bname = chalk.green(shorthand);
-      const tAgo = timeAgo
-        .format(date)
-        .replace("minutes", "mins")
-        .padEnd(longestTimeLen);
-      const msg = message.trim();
+  const choices = results.map(({ sha: fullSha, date, shorthand, message, branch, isHead, parentBranch }) => {
+    const h = isHead ? "*" : " ";
+    const sha = chalk.dim(fullSha.substring(0, 5));
+    const bname = chalk.green(shorthand);
+    const tAgo = timeAgo.format(date).replace("minutes", "mins").padEnd(longestTimeLen);
+    const msg = message.trim();
 
-      // shorthand === parentBranch on trunk. main is root node and parent of itself
-      const parent =
-        parentBranch === null || shorthand === parentBranch
-          ? ""
-          : chalk.gray(" \u{2192} ") + chalk.green(parentBranch);
+    // shorthand === parentBranch on trunk. main is root node and parent of itself
+    const parent =
+      parentBranch === null || shorthand === parentBranch ? "" : chalk.gray(" \u{2192} ") + chalk.green(parentBranch);
 
-      let name = `${h} ${tAgo} ${sha} ${bname}${parent}`;
+    let name = `${h} ${tAgo} ${sha} ${bname}${parent}`;
 
-      const widthWithoutMsg =
-        COMMANDER_LIST_INDICATOR_LENGTH + 1 + stripAnsi(name).length;
+    const widthWithoutMsg = COMMANDER_LIST_INDICATOR_LENGTH + 1 + stripAnsi(name).length;
 
-      if (COLUMNS - widthWithoutMsg > 5) {
-        const spaceLeft = COLUMNS - widthWithoutMsg;
-        name += " " + chalk.dim(msg.substring(0, spaceLeft - 1));
-      }
-
-      return {
-        name: name,
-        value: branch,
-        short: shorthand,
-      };
+    if (COLUMNS - widthWithoutMsg > 5) {
+      const spaceLeft = COLUMNS - widthWithoutMsg;
+      name += " " + chalk.dim(msg.substring(0, spaceLeft - 1));
     }
-  );
+
+    return {
+      name: name,
+      value: branch,
+      short: shorthand,
+    };
+  });
 
   // console.log(choices);
   // process.exit(0);

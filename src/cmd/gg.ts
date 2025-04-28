@@ -29,16 +29,9 @@ program
   .action(async (message) => ggGo(message));
 
 program.command("sync", "syncs main");
+program.command("amend", "amends/adds to the current diff").alias("a");
 
-program
-  .command("send <branchname> <message>", "creates and pushes a branch/commit")
-  .alias("s");
-
-program
-  .command("amend")
-  .alias("a")
-  .description("amends/adds to the current diff")
-  .action(async () => ggAmend());
+program.command("send <branchname> <message>", "creates and pushes a branch/commit");
 
 // program
 //   .command("move <ref> <dest>")
@@ -87,10 +80,7 @@ program
 
       console.log(chalk.yellow("commit " + commit.sha()), branchText);
 
-      console.log(
-        "Author:",
-        commit.author().name() + " <" + commit.author().email() + ">"
-      );
+      console.log("Author:", commit.author().name() + " <" + commit.author().email() + ">");
       console.log("Date:", commit.date());
       console.log("\n    " + commit.message());
     });
@@ -112,7 +102,7 @@ program
         "--date=relative",
         "--branches",
       ],
-      { stdio: "inherit" }
+      { stdio: "inherit" },
     );
   });
 
@@ -129,9 +119,7 @@ program
   .action(async () => {
     let result, err;
     try {
-      [result, err] = await execAsync(
-        `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
-      );
+      [result, err] = await execAsync(`git rev-parse --abbrev-ref --symbolic-full-name @{u}`);
 
       process.stdout.write(result);
       console.log("NOW ERRE");
@@ -160,9 +148,7 @@ program
     const base = baseRef[0].shorthand();
     const [currentBranch, err2] = await execAsync(`git branch --show-current`);
     process.stderr.write(err2);
-    const [result, err3] = await execAsync(
-      `gh pr create --base ${base} --head ${currentBranch}`
-    );
+    const [result, err3] = await execAsync(`gh pr create --base ${base} --head ${currentBranch}`);
     process.stdout.write(result);
     process.stderr.write(err3);
   });

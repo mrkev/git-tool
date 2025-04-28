@@ -1,11 +1,5 @@
 import { Repository } from "nodegit";
-import {
-  oidToRefMap,
-  leastCommonAncestor,
-  commitsBetween,
-  refToOidMap,
-  getTrunkRef,
-} from "./branches";
+import { oidToRefMap, leastCommonAncestor, commitsBetween, refToOidMap, getTrunkRef } from "./branches";
 
 export class RefDeps {
   repo: Repository;
@@ -13,9 +7,7 @@ export class RefDeps {
     this.repo = repo;
   }
 
-  async parentForBranch(
-    branchName: string
-  ): Promise<{ hash: string; branchName: string | null }> {
+  async parentForBranch(branchName: string): Promise<{ hash: string; branchName: string | null }> {
     const repo = this.repo;
     const oidToRefs = await oidToRefMap(this.repo);
     const refToOid = await refToOidMap(this.repo);
