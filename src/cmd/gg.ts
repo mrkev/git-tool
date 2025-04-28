@@ -8,7 +8,7 @@ import pkg from "../../package.json";
 import { RefDeps } from "../RefDeps";
 import { getTrunkRef, oidToRefMap } from "../branches";
 import { execAsync } from "../exec";
-import { ggAmend, ggDelmerged, ggGo, ggSync } from "../lib/gg";
+import { ggDelmerged } from "../lib/gg";
 import { ggBranch } from "../lib/gg-branch";
 import { getRepo } from "../repo";
 
@@ -23,14 +23,9 @@ program
   .description("branch a branch/commit")
   .action((branch?: string) => ggBranch(branch || null));
 
-program
-  .command("go <message>")
-  .description("syncs main")
-  .action(async (message) => ggGo(message));
-
+program.command("go <message>", "commits and pushes");
 program.command("sync", "syncs main");
 program.command("amend", "amends/adds to the current diff").alias("a");
-
 program.command("send <branchname> <message>", "creates and pushes a branch/commit");
 
 // program

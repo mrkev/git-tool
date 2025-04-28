@@ -4,6 +4,7 @@
   "type": "module",
   "bin": {
     "gg": "./dist/gg",
+    "gg-go": "./dist/gg-go",
     "gg-send": "./dist/gg-send",
     "gg-sync": "./dist/gg-sync",
     "gg-amend": "./dist/gg-amend"

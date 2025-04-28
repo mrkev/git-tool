@@ -1,7 +1,7 @@
+import { execa } from "execa";
 import { execAsync, spawnStep } from "../exec";
 import { isRebasing } from "../utils";
 import { defaultBranch } from "./branch";
-import { execa } from "execa";
 
 export async function ggAmend() {
   const rebasing = await isRebasing();
@@ -11,13 +11,6 @@ export async function ggAmend() {
   } else {
     await spawnStep(`git commit --amend && git push --force`);
   }
-}
-
-export async function ggGo(message: string) {
-  // TODO: make sure to exit if sync fails!
-  await ggSync();
-  await spawnStep(`git commit -m "${message}"`);
-  await spawnStep(`git push`);
 }
 
 export async function ggSync() {
