@@ -4,7 +4,8 @@
   "type": "module",
   "bin": {
     "gg": "./dist/gg",
-    "gg-send": "./dist/gg-send"
+    "gg-send": "./dist/gg-send",
+    "gg-sync": "./dist/gg-sync"
   },
   "scripts": {
     "dev": "rollup --config --bundleConfigAsCjs rollup.config.js --watch",

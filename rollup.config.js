@@ -51,4 +51,13 @@ export default [
     },
     plugins,
   },
+  {
+    input: "src/gg-sync.ts",
+    output: {
+      // dir: "dist",
+      file: "dist/gg-sync",
+      format: "esm",
+    },
+    plugins,
+  },
 ];

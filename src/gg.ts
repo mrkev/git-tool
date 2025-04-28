@@ -28,6 +28,8 @@ program
   .description("syncs main")
   .action(async (message) => ggGo(message));
 
+program.command("sync", "syncs main");
+
 program
   .command("send <branchname> <message>", "creates and pushes a branch/commit")
   .alias("s");
@@ -37,11 +39,6 @@ program
   .alias("a")
   .description("amends/adds to the current diff")
   .action(async () => ggAmend());
-
-program
-  .command("sync")
-  .description("syncs main")
-  .action(async () => ggSync());
 
 // program
 //   .command("move <ref> <dest>")

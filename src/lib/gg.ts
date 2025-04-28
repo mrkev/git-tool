@@ -1,5 +1,7 @@
 import { execAsync, spawnStep } from "../exec";
-import { isRebasing, mainBranchName } from "../utils";
+import { isRebasing } from "../utils";
+import { defaultBranch } from "./branch";
+import { execa } from "execa";
 
 export async function ggAmend() {
   const rebasing = await isRebasing();
@@ -19,9 +21,10 @@ export async function ggGo(message: string) {
 }
 
 export async function ggSync() {
-  const main = mainBranchName();
-  await spawnStep(`git checkout master`);
-  await spawnStep(`git pull`);
+  const main = await defaultBranch();
+  const $ = execa({ all: true, stdout: ["pipe", "inherit"] });
+  await $`git checkout ${main}`;
+  await $`git pull`;
   // await ggDelmerged();
 }
 
