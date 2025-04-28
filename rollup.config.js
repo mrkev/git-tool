@@ -1,9 +1,10 @@
 // rollup.config.js
-import nativePlugin from "rollup-plugin-natives";
-import typescript from "@rollup/plugin-typescript";
-import { preserveShebangs } from "rollup-plugin-preserve-shebangs";
 import json from "@rollup/plugin-json";
+import typescript from "@rollup/plugin-typescript";
+import nativePlugin from "rollup-plugin-natives";
+import { preserveShebangs } from "rollup-plugin-preserve-shebangs";
 
+/** @type {import('rollup').RollupOptions} */
 export default {
   input: "index.ts",
   output: {
@@ -11,6 +12,7 @@ export default {
     file: "dist/bundle.js",
     format: "esm",
   },
+  // input: {},
   plugins: [
     preserveShebangs(),
     typescript(),
