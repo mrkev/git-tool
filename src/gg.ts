@@ -7,10 +7,9 @@ import nodegit from "nodegit";
 import pkg from "../package.json";
 import { RefDeps } from "./RefDeps";
 import { getTrunkRef, oidToRefMap } from "./branches";
+import { execAsync } from "./exec";
 import { ggAmend, ggDelmerged, ggGo, ggSync } from "./lib/gg";
 import { ggBranch } from "./lib/gg-branch";
-import { ggSend } from "./lib/gg-send";
-import { execAsync } from "./exec";
 import { getRepo } from "./repo";
 
 const program = new Command();
@@ -30,10 +29,8 @@ program
   .action(async (message) => ggGo(message));
 
 program
-  .command("send <branchname> <message>")
-  .alias("s")
-  .description("creates and pushes a branch/commit")
-  .action(async (branchname, message) => ggSend(branchname, message));
+  .command("send <branchname> <message>", "creates and pushes a branch/commit")
+  .alias("s");
 
 program
   .command("amend")

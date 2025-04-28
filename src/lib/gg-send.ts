@@ -1,9 +1,12 @@
 import chalk from "chalk";
 import { execAsync, spawnStep } from "../exec";
+import { currentBranch } from "./branch";
 
 export async function ggSend(branchname: string, message: string) {
-  const [currRaw] = await execAsync(`git rev-parse --abbrev-ref HEAD`);
-  const currBranch = currRaw.trim();
+  // TODO: -b option
+  // TODO: check if current === branchname
+  const currBranch = currentBranch();
+
   await spawnStep(`git checkout -b ${branchname}`);
   await spawnStep(`git commit -m "${message}"`);
   const [msg, err] = await execAsync(
