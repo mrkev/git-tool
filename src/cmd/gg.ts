@@ -22,6 +22,7 @@ program.command("go <message>", "commits and pushes");
 program.command("sync", "syncs main");
 program.command("amend", "amends/adds to the current diff").alias("a");
 program.command("send <branchname> <message>", "creates and pushes a branch/commit");
+program.command("delmerged", "deletes merged branches");
 
 // TODO: uncommit, unstage
 
@@ -33,11 +34,6 @@ program.command("send <branchname> <message>", "creates and pushes a branch/comm
 //     // git rebase dest
 //     // rebase branches dependant on this one?
 //   });
-
-program
-  .command("delmerged")
-  .description("rebases a commit/branch somewhere else")
-  .action(async () => ggDelmerged());
 
 program
   .command("log")
