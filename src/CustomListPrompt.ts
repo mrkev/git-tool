@@ -14,7 +14,7 @@ import observe from "inquirer/lib/utils/events";
 import Paginator from "inquirer/lib/utils/paginator.js";
 
 import Prompt from "inquirer/lib/prompts/base.js";
-import inquirer from "inquirer";
+import inquirer, { Answers, Question } from "inquirer";
 import { Interface as ReadlineInterface } from "readline";
 import Choices from "inquirer/lib/objects/choices";
 import Choice from "inquirer/lib/objects/choice";
@@ -67,7 +67,7 @@ export default class CustomListPrompt extends Prompt {
   private promptQuestion: string = "";
   private promptInput: string = "";
 
-  constructor(questions: inquirer.Question[], rl: ReadlineInterface, answers: inquirer.Answers) {
+  constructor(questions: Question[], rl: ReadlineInterface, answers: Answers) {
     super(questions, rl, answers);
 
     if (!this.opt.choices) {
