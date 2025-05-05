@@ -23,6 +23,8 @@ program.command("sync", "syncs main");
 program.command("amend", "amends/adds to the current diff").alias("a");
 program.command("send <branchname> <message>", "creates and pushes a branch/commit");
 
+// TODO: uncommit, unstage
+
 // program
 //   .command("move <ref> <dest>")
 //   .description("rebases a commit/branch somewhere else")
