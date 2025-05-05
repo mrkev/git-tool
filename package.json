@@ -9,7 +9,8 @@
     "gg-sync": "./dist/gg-sync",
     "gg-amend": "./dist/gg-amend",
     "gg-branch": "./dist/gg-branch",
-    "gg-delmerged": "./dist/gg-delmerged"
+    "gg-delmerged": "./dist/gg-delmerged",
+    "gg-rebase": "./dist/gg-rebase"
   },
   "scripts": {
     "dev": "rollup --config --bundleConfigAsCjs rollup.config.js --watch",

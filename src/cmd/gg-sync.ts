@@ -3,7 +3,6 @@
 import { Command } from "commander";
 import { execa } from "execa";
 import { defaultBranch } from "../lib/branch";
-import { ggDelmerged } from "../lib/gg";
 
 const program = new Command();
 

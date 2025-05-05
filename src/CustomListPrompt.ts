@@ -2,23 +2,17 @@
  * `list` type prompt
  */
 
-import findIndex from "lodash/findIndex.js";
-
 import chalk from "chalk";
-import figures from "figures";
 import cliCursor from "cli-cursor";
-// @ts-ignore
-// import runAsync from "run-async";
-// import { flatMap, map, take, takeUntil } from "rxjs/operators";
-import observe from "inquirer/lib/utils/events";
-import Paginator from "inquirer/lib/utils/paginator.js";
-
-import Prompt from "inquirer/lib/prompts/base.js";
-import inquirer, { Answers, Question } from "inquirer";
-import { Interface as ReadlineInterface } from "readline";
-import Choices from "inquirer/lib/objects/choices";
+import figures from "figures";
+import { Answers, Question } from "inquirer";
 import Choice from "inquirer/lib/objects/choice";
+import Choices from "inquirer/lib/objects/choices";
 import Separator from "inquirer/lib/objects/separator.js";
+import Prompt from "inquirer/lib/prompts/base.js";
+import Paginator from "inquirer/lib/utils/paginator.js";
+import findIndex from "lodash/findIndex.js";
+import { Interface as ReadlineInterface } from "readline";
 import { deleteBranches, showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";

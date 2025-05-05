@@ -8,7 +8,6 @@ import pkg from "../../package.json";
 import { RefDeps } from "../RefDeps";
 import { getTrunkRef, oidToRefMap } from "../branches";
 import { execAsync } from "../exec";
-import { ggDelmerged } from "../lib/gg";
 import { ggBranch } from "../lib/gg-branch";
 import { getRepo } from "../repo";
 
@@ -23,6 +22,7 @@ program.command("sync", "syncs main");
 program.command("amend", "amends/adds to the current diff").alias("a");
 program.command("send <branchname> <message>", "creates and pushes a branch/commit");
 program.command("delmerged", "deletes merged branches");
+program.command("rebase", "rebase a commit on top of another");
 
 // TODO: uncommit, unstage
 
