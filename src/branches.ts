@@ -1,4 +1,4 @@
-import nodegit, { Reference, Repository } from "nodegit";
+import { Reference, Repository } from "nodegit";
 import { execAsync } from "./exec";
 
 export async function localBranches(repo: Repository): Promise<Reference[]> {

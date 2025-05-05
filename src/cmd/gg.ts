@@ -17,12 +17,7 @@ program.version(pkg.version);
 
 program.action(() => ggBranch(null));
 
-program
-  .command("branch [branch]")
-  .alias("b")
-  .description("branch a branch/commit")
-  .action((branch?: string) => ggBranch(branch || null));
-
+program.command("branch [branch]", "switch to a branch/commit").alias("b");
 program.command("go <message>", "commits and pushes");
 program.command("sync", "syncs main");
 program.command("amend", "amends/adds to the current diff").alias("a");
