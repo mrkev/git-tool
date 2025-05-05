@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { ggSend } from "../lib/gg-send";
+import chalk from "chalk";
+import { execAsync, spawnStep } from "../exec";
+import { currentBranch } from "../lib/branch";
 
 const program = new Command();
 
@@ -13,12 +15,36 @@ program
 
 program.parse(process.argv);
 
-const [branch, message] = program.args;
+const [branchname, message] = program.args;
 const { dry, b } = program.opts();
 
 if (dry) {
-  console.log("would commit to branch", branch);
+  console.log("would commit to branch", branchname);
   console.log("would use commit message", message);
-} else {
-  await ggSend(branch, message);
+  process.exit(0);
+}
+
+// TODO: -b option
+// TODO: check if current === branchname
+const currBranch = currentBranch();
+
+await spawnStep(`git checkout -b ${branchname}`);
+await spawnStep(`git commit -m "${message}"`);
+const [msg, err] = await execAsync(`git push --set-upstream origin ${branchname}`);
+
+// remote messages get printed to stderr for some reason
+const lines = err.split("\n");
+for (let i = 0; i < lines.length; i++) {
+  if (lines[i].indexOf("Create a pull request for") === -1) {
+    console.log("out", lines[i], lines[i].indexOf("Create a pull request for"));
+
+    continue;
+  }
+  const match = /(https?.*)\/pull\/new/gm.exec(lines[i + 1]);
+  if (!match) {
+    throw new Error("this isn't expected!");
+  }
+  console.log(`Create a pull request to ${chalk.green(currBranch)} <- ${chalk.green(branchname)}:`);
+  console.log("    " + chalk.underline(match[1] + `/compare/${currBranch}...${branchname}?expand=1\n`));
+  break;
 }

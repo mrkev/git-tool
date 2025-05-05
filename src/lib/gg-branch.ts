@@ -1,16 +1,16 @@
-import inquirer from "inquirer";
 import chalk from "chalk";
 import { exec } from "child_process";
-import { localBranches } from "../branches";
-import { getRepo } from "../repo";
-import { getStatusText } from "../status";
+import inquirer from "inquirer";
+import TimeAgo from "javascript-time-ago";
+import en from "javascript-time-ago/locale/en";
+import nodegit from "nodegit";
 import { EOL } from "os";
 import { stripAnsi } from "../ansi";
-import nodegit from "nodegit";
-import en from "javascript-time-ago/locale/en";
-import TimeAgo from "javascript-time-ago";
+import { localBranches } from "../branches";
 import CustomListPrompt from "../CustomListPrompt";
 import { RefDeps } from "../RefDeps";
+import { getRepo } from "../repo";
+import { getStatusText } from "../status";
 
 inquirer.registerPrompt("custom-list", CustomListPrompt);
 
