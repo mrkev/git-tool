@@ -11,7 +11,8 @@
     "gg-branch": "./dist/gg-branch",
     "gg-delmerged": "./dist/gg-delmerged",
     "gg-rebase": "./dist/gg-rebase",
-    "gg-unstage": "./dist/gg-unstage"
+    "gg-unstage": "./dist/gg-unstage",
+    "gg-see": "./dist/gg-see"
   },
   "scripts": {
     "dev": "rollup --config --bundleConfigAsCjs rollup.config.js --watch",

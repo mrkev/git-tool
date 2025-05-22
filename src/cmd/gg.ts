@@ -25,6 +25,7 @@ program.command("delmerged", "deletes merged branches");
 program.command("rebase", "rebase a commit on top of another");
 program.command("unstage", "removes all files from staging");
 // program.command("uncommit", "unpackage the last commit"); // todo
+program.command("see", "show latest commit");
 
 // program
 //   .command("move <ref> <dest>")
