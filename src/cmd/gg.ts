@@ -23,8 +23,8 @@ program.command("amend", "amends/adds to the current diff").alias("a");
 program.command("send <branchname> <message>", "creates and pushes a branch/commit");
 program.command("delmerged", "deletes merged branches");
 program.command("rebase", "rebase a commit on top of another");
-
-// TODO: uncommit, unstage
+program.command("unstage", "removes all files from staging");
+// program.command("uncommit", "unpackage the last commit"); // todo
 
 // program
 //   .command("move <ref> <dest>")
