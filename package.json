@@ -22,37 +22,37 @@
   },
   "license": "MIT",
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "^5.6.2",
     "cli-cursor": "^5.0.0",
     "commander": "^13.1.0",
-    "execa": "^9.5.2",
+    "execa": "^9.6.1",
     "figures": "^6.1.0",
-    "inquirer": "^9.3.7",
-    "javascript-time-ago": "^2.5.11",
-    "lodash": "^4.17.21",
-    "nodegit": "^0.28.0-alpha.26",
+    "inquirer": "^9.3.8",
+    "javascript-time-ago": "^2.6.4",
+    "lodash": "^4.17.23",
+    "nodegit": "^0.28.0-alpha.36",
     "omelette": "^0.4.17"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-typescript": "^12.1.2",
-    "@types/inquirer": "^9.0.7",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/inquirer": "^9.0.9",
     "@types/javascript-time-ago": "^2.5.0",
-    "@types/lodash": "^4.17.16",
-    "@types/node": "22.15.3",
-    "@types/nodegit": "^0.28.8",
+    "@types/lodash": "^4.17.24",
+    "@types/node": "22.19.15",
+    "@types/nodegit": "^0.28.11",
     "@types/omelette": "^0.4.5",
-    "glob": "^11.0.2",
-    "prettier": "^3.5.3",
-    "rollup": "^4.40.1",
+    "glob": "^11.1.0",
+    "prettier": "^3.8.1",
+    "rollup": "^4.60.0",
     "rollup-plugin-natives": "^0.7.8",
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   },
   "prettier": {
     "printWidth": 120,
     "trailingComma": "all"
   },
-  "packageManager": "pnpm@10.10.0"
+  "packageManager": "pnpm@10.32.1"
 }
