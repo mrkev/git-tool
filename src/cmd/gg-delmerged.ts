@@ -6,9 +6,15 @@ import { isRebasing } from "../utils";
 
 const program = new Command();
 
+program.option("-p, --profile", "print timing info");
+
 program.parse(process.argv);
 
-// TODO: don't if rebasing?
-const rebasing = await isRebasing();
+const { profile } = program.opts();
 
-await ggDelmerged();
+if (await isRebasing()) {
+  console.error("Cannot delete merged branches while a rebase is in progress.");
+  process.exit(1);
+}
+
+await ggDelmerged(profile ?? false);
