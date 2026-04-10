@@ -1,22 +1,31 @@
 import { execAsync } from "../exec";
 import { defaultBranch } from "./branch";
+import { Profiler } from "./Profiler";
 
-export async function ggDelmerged() {
-  const main = defaultBranch();
+export async function ggDelmerged(doProfile: boolean = false) {
+  const trunk = await defaultBranch();
+  const p = new Profiler(doProfile);
+
+  p.log("defaultBranch");
 
   let result, err;
 
-  // cleans local refs for merged branches
+  // cleans local refs for merged branches, skipping current branch, trunk, and dev
+  [result, err] = await execAsync(`git branch --merged | grep -Ev "(^\\*|${trunk}|dev)" | xargs git branch -d`);
+  process.stdout.write(result);
+  process.stderr.write(err);
+
+  p.log("clean local merged branches");
+
+  // cleans remote refs and force-deletes local branches whose upstream is gone
+  // (catches squash-merged branches that git doesn't know are "merged")
   [result, err] = await execAsync(
-    `git branch --merged` + ` | egrep -v "(^\*|master|main|dev)"` + ` | xargs git branch -d`,
+    `git fetch -p && for branch in $(git for-each-ref --format '%(refname) %(upstream:track)' refs/heads | awk '$2 == "[gone]" {sub("refs/heads/", "", $1); print $1}'); do git branch -D $branch; done`,
   );
   process.stdout.write(result);
   process.stderr.write(err);
 
-  // cleans remote refs for deleted or merged ? branches
-  [result, err] = await execAsync(`git remote prune origin`);
-  process.stdout.write(result);
-  process.stderr.write(err);
+  p.log("fetch -p + clean gone branches");
 }
 
 // git branch -m master main

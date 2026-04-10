@@ -11,5 +11,4 @@ program.parse(process.argv);
 // TODO: don't if rebasing?
 const rebasing = await isRebasing();
 
-// TODO: fix delmerged
 await ggDelmerged();
