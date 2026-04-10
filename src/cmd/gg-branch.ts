@@ -5,18 +5,19 @@ import { ggBranch } from "../lib/gg-branch";
 
 const program = new Command();
 
-program.argument("[branch]", "branch name").option("-d, --dry", "dry run (for testing)");
+program
+  .argument("[branch]", "branch name")
+  .option("-d, --dry", "dry run (for testing)")
+  .option("-p, --profile", "print timing info");
 
 program.parse(process.argv);
 
 const [branch] = program.args;
-const { dry } = program.opts();
+const { dry, profile } = program.opts();
 
 if (dry) {
   console.log("gg-branch called with", branch);
   process.exit(0);
 }
 
-console.log("TODO");
-
-await ggBranch(branch || null);
+await ggBranch(branch || null, profile ?? false);

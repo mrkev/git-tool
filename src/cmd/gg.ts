@@ -14,7 +14,10 @@ import { getRepo } from "../repo";
 const program = new Command();
 program.version(pkg.version);
 
-program.action(() => ggBranch(null));
+program.action(() => {
+  const profile = process.argv.includes("--profile") || process.argv.includes("-p");
+  return ggBranch(null, profile);
+});
 
 program.command("branch [branch]", "switch to a branch/commit").alias("b");
 program.command("go <message>", "commits and pushes");

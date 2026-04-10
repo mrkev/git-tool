@@ -11,6 +11,7 @@ import CustomListPrompt from "../CustomListPrompt";
 import { RefDeps } from "../RefDeps";
 import { getRepo } from "../repo";
 import { getStatusText } from "../status";
+import { Profiler } from "./Profiler";
 
 inquirer.registerPrompt("custom-list", CustomListPrompt);
 
@@ -20,21 +21,27 @@ const timeAgo = new TimeAgo("en-US");
 /**
  * gg branch [branch]
  */
-export async function ggBranch(branch: string | null) {
+export async function ggBranch(branch: string | null, doProfile: boolean = false) {
   const repo = await getRepo();
+  const p = new Profiler(doProfile);
+
+  p.log("getRepo");
 
   // Show list
   if (branch == null) {
     const refs = await repo.getReferences();
+    p.log("getReferences");
 
     // Fetch status and branch data in parallel
     const [statusText, branchData] = await Promise.all([getStatusText(repo), getBranchListData(repo, refs)]);
+    p.log("getStatusText + getBranchListData (parallel)");
 
     if (statusText.length) {
       console.log(chalk.dim("\nChanges not staged for commit:"));
-      console.log(statusText.map((text) => `    ${text}`).join("\n"));
+      console.log(statusText.map((text: string) => `    ${text}`).join("\n"));
     }
 
+    p.log("total before prompt");
     await showBranchPrompt(repo, branchData);
     return;
   }
