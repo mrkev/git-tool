@@ -13,6 +13,12 @@ import Prompt from "inquirer/lib/prompts/base.js";
 import Paginator from "inquirer/lib/utils/paginator.js";
 import findIndex from "lodash/findIndex.js";
 import { Interface as ReadlineInterface } from "readline";
+
+interface CustomListQuestion extends Question {
+  loop?: boolean;
+  pageSize?: number;
+}
+
 import { deleteBranches, showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";
@@ -25,7 +31,7 @@ type KeypressKey = {
   code: string;
 };
 
-export default class CustomListPrompt extends Prompt {
+export default class CustomListPrompt extends Prompt<CustomListQuestion> {
   /**
    * Resolves the value of the prompt.
    */
@@ -61,7 +67,7 @@ export default class CustomListPrompt extends Prompt {
   private promptQuestion: string = "";
   private promptInput: string = "";
 
-  constructor(questions: Question[], rl: ReadlineInterface, answers: Answers) {
+  constructor(questions: CustomListQuestion[], rl: ReadlineInterface, answers: Answers) {
     super(questions, rl, answers);
 
     if (!this.opt.choices) {
@@ -77,7 +83,7 @@ export default class CustomListPrompt extends Prompt {
     if (typeof def === "number" && def >= 0 && def < this.opt.choices.realLength) {
       this.selected = def;
     } else if (!(typeof def === "number") && def != null) {
-      const index = findIndex(this.opt.choices.realChoices, ({ value }: any) => value === def);
+      const index = findIndex(this.opt.choices.realChoices, ({ value }) => value === def);
       this.selected = Math.max(index, 0);
     }
 
@@ -86,8 +92,8 @@ export default class CustomListPrompt extends Prompt {
     // Make sure no default is set (so it won't be printed)
     this.opt.default = null;
 
-    const shouldLoop = (this.opt as any).loop === undefined ? true : (this.opt as any).loop;
-    this.paginator = new (Paginator as any)(this.screen, {
+    const shouldLoop = this.opt.loop === undefined ? true : this.opt.loop;
+    this.paginator = new Paginator(this.screen, {
       isInfinite: shouldLoop,
     });
   }
@@ -141,6 +147,7 @@ export default class CustomListPrompt extends Prompt {
 
       case "help":
         process.stderr.write("commands: q (quit)qm (print mode)\n" + "immediates: ");
+        break;
 
       case "pull":
       // TODO: same as git checkout [selected branch]
@@ -172,6 +179,7 @@ export default class CustomListPrompt extends Prompt {
   onPromptKeypress(char: string, key: KeypressKey): void {
     switch (key.name) {
       case "backspace":
+        // TODO: prompt or command input
         if (this.commandInput.length === 0) {
           break;
         }
@@ -237,7 +245,6 @@ export default class CustomListPrompt extends Prompt {
   }
 
   async onListKeypress(char: string, key: KeypressKey): Promise<void> {
-    // console.log(key);
     switch (key.name) {
       // Movement
       case "down":
@@ -317,11 +324,12 @@ export default class CustomListPrompt extends Prompt {
       case "return":
         const value = this.getCurrentValue();
         // I think I copied this correctly?
-        const filtered = (this.opt.filter as any)(value, this.answers);
+        const filtered = this.opt.filter ? this.opt.filter(value, this.answers) : value;
         // .catch(
         //   (err: any) => err
         // );
         this.onSubmit(filtered);
+        break;
 
       default:
         break;
@@ -335,13 +343,6 @@ export default class CustomListPrompt extends Prompt {
       this.promptQuestion = question;
       this.render();
     });
-  }
-
-  private confirm(question: string, cb: (answer: boolean) => void) {
-    this.setMode("prompt");
-    this.promptCallback = cb;
-    this.promptQuestion = question;
-    this.render();
   }
 
   /**
@@ -359,35 +360,35 @@ export default class CustomListPrompt extends Prompt {
     // Render choices or answer depending on the state
     if (this.status === "answered") {
       message += chalk.cyan(this.opt.choices.getChoice(this.selected).short);
-      (this.screen as any).render(message);
+      this.screen.render(message, "");
       return;
     }
 
     // Render list
     const choicesStr = this.listRender(this.opt.choices, this.selected, this.marked);
-    const indexPosition = this.opt.choices.indexOf(this.opt.choices.getChoice(this.selected) as any);
+    const selectedChoice = this.opt.choices.getChoice(this.selected);
+    const indexPosition = this.opt.choices.indexOf(selectedChoice as Choice | Separator);
     const realIndexPosition =
-      (this.opt.choices as any).reduce((acc: number, value: any, i: number) => {
+      this.opt.choices.choices.reduce((acc, value, i) => {
         // Dont count lines past the choice we are looking at
         if (i > indexPosition) {
           return acc;
         }
-        // Add line if it's a separator
-        if (value.type === "separator") {
+        // Strings and separators take up one line
+        if (typeof value === "string" || value.type === "separator") {
           return acc + 1;
         }
 
-        let l = value.name;
+        const name = value.name;
         // Non-strings take up one line
-        if (typeof l !== "string") {
+        if (typeof name !== "string") {
           return acc + 1;
         }
 
         // Calculate lines taken up by string
-        l = l.split("\n");
-        return acc + l.length;
+        return acc + name.split("\n").length;
       }, 0) - 1;
-    message += "\n" + (this.paginator as any).paginate(choicesStr, realIndexPosition, (this.opt as any).pageSize);
+    message += "\n" + this.paginator.paginate(choicesStr, realIndexPosition, this.opt.pageSize);
 
     // Line for commands
     if (this.mode === "list") {
@@ -409,12 +410,12 @@ export default class CustomListPrompt extends Prompt {
     const filter = this.commandInput[0] === "/" ? this.commandInput.substring(1) : "";
 
     choices
-      .filter(((choice: Choice<any> | Separator) => {
+      .filter((choice: Choice | Separator): choice is Choice | Separator => {
         if (filter === "") {
           return true;
         }
         return !(choice instanceof Separator) && choice.short.indexOf(filter) > -1;
-      }) as any)
+      })
       .forEach((choice, i) => {
         if (choice.type === "separator") {
           separatorOffset++;
@@ -463,14 +464,14 @@ export default class CustomListPrompt extends Prompt {
     }
   }
 
-  getCurrentValue(): void {
+  getCurrentValue() {
     return this.opt.choices.getChoice(this.selected).value;
   }
 }
 
-function incrementListIndex(current: number, dir: "up" | "down", opt: any) {
+function incrementListIndex(current: number, dir: "up" | "down", opt: { choices: Choices; loop?: boolean }) {
   const len = opt.choices.realLength;
-  const shouldLoop = "loop" in opt ? Boolean(opt.loop) : true;
+  const shouldLoop = opt.loop === undefined ? true : opt.loop;
   if (dir === "up") {
     if (current > 0) {
       return current - 1;

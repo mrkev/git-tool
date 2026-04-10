@@ -15,7 +15,7 @@
     "gg-see": "./dist/gg-see"
   },
   "scripts": {
-    "postinstall": "BUILD_ONLY=true pnpm rebuild nodegit",
+    "nodegit": "BUILD_ONLY=true pnpm rebuild nodegit",
     "dev": "rollup --config --bundleConfigAsCjs rollup.config.js --watch",
     "build": "rollup --config --bundleConfigAsCjs rollup.config.js",
     "gg": "npm run build && node ./dist/bundle.js",
