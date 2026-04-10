@@ -3,7 +3,6 @@
 import chalk from "chalk";
 import { Command } from "commander";
 import { execa } from "execa";
-import { execAsync } from "../exec";
 import { currentBranch, defaultBranch } from "../lib/branch";
 import { log } from "../utils";
 
@@ -30,45 +29,71 @@ if (dry) {
   process.exit(0);
 }
 
+// Check for staged changes before doing anything
+const hasStagedChanges = await execa("git", ["diff", "--cached", "--quiet"]).then(
+  () => false,
+  () => true,
+);
+if (!hasStagedChanges) {
+  console.error(chalk.red("Error:"), "Nothing staged to commit. Stage your changes first (git add).");
+  process.exit(1);
+}
+
 if (fromMain) {
   const main = await defaultBranch();
-  log.keep(`checking out ${chalk.green(main)}...`);
+  log.keep(`checking out main branch: ${chalk.green(main)}...`);
   await $`git checkout ${main}`;
 }
 
 const currBranch = await currentBranch();
 if (currBranch === branchname) {
-  // TODO
-  console.log("TODO: currBranch === branchname", currBranch, branchname);
-  process.exit(0);
+  console.error(chalk.red("Error:"), `Already on branch '${branchname}'. Choose a different branch name.`);
+  process.exit(1);
 }
 
 log.keep(`\nnew branch ${chalk.green(branchname)} -> ${chalk.green(currBranch)}`);
 await $`git checkout -b ${branchname}`;
-await $`git commit -m "${message}"`;
+await $`git commit -m ${message}`;
 log.keep(`created diff ${chalk.green(branchname)} ${chalk.yellow(`"${message}"`)}`);
 
-const [msg, err] = await execAsync(`git push --set-upstream origin ${branchname}`);
+const pushResult = await $`git push --set-upstream origin ${branchname}`;
 
 // remote messages get printed to stderr for some reason
-const lines = err.split("\n");
+const lines = (pushResult.stderr ?? "").split("\n");
 if (verbose) {
   log.verbose("logging push lines...");
   log.keep(lines.join("\n"));
   log.verbose("end of push lines.");
 }
 
+// Try to extract the PR URL from git's remote message
+let foundPrUrl = false;
 for (let i = 0; i < lines.length; i++) {
   if (lines[i].indexOf("Create a pull request for") === -1) {
-    console.log("out", lines[i], lines[i].indexOf("Create a pull request for"));
-
     continue;
   }
   const match = /(https?.*)\/pull\/new/gm.exec(lines[i + 1]);
-  if (!match) {
-    throw new Error("this isn't expected!");
+  if (match) {
+    log.keep(`\nCreate a pull request to ${chalk.green(currBranch)} <- ${chalk.green(branchname)}:`);
+    log.keep("    " + chalk.underline(match[1] + `/compare/${currBranch}...${branchname}?expand=1\n`));
+    foundPrUrl = true;
   }
-  log.keep(`\nCreate a pull request to ${chalk.green(currBranch)} <- ${chalk.green(branchname)}:`);
-  log.keep("    " + chalk.underline(match[1] + `/compare/${currBranch}...${branchname}?expand=1\n`));
   break;
+}
+
+// Fallback: construct PR URL from remote origin
+if (!foundPrUrl) {
+  try {
+    const remoteResult = await execa("git", ["remote", "get-url", "origin"]);
+    const remoteUrl = remoteResult.stdout.trim();
+    // Extract owner/repo from SSH or HTTPS remote URLs
+    const repoMatch = remoteUrl.match(/(?:github\.com)[:/](.+?)(?:\.git)?$/);
+    if (repoMatch) {
+      const compareUrl = `https://github.com/${repoMatch[1]}/compare/${currBranch}...${branchname}?expand=1`;
+      log.keep(`\nCreate a pull request to ${chalk.green(currBranch)} <- ${chalk.green(branchname)}:`);
+      log.keep("    " + chalk.underline(compareUrl + "\n"));
+    }
+  } catch {
+    // Non-GitHub remote or no remote configured — skip PR URL
+  }
 }
