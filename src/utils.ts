@@ -13,4 +13,5 @@ export const log = {
   green: (...args: unknown[]) => console.log(chalk.green(...args)),
   keep: (...args: unknown[]) => console.log(...args),
   verbose: (...args: unknown[]) => console.log(`[${chalk.green("verbose")}]`, ...args),
+  error: (...args: unknown[]) => console.error(chalk.red("Error:"), ...args),
 };

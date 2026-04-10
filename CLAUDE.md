@@ -25,6 +25,7 @@ Rollup compiles each `src/cmd/gg*.ts` file into a standalone ESM binary in `dist
 ### Command Structure
 
 Each command has two parts:
+
 - **`src/cmd/gg-*.ts`** — CLI entry point (commander.js parsing, shebang line)
 - **`src/lib/gg-*.ts`** — Business logic (imported by both the standalone binary and the main `gg` dispatcher)
 
@@ -33,6 +34,7 @@ The main `src/cmd/gg.ts` aggregates all subcommands into a single `gg <subcomman
 ### Git Operations
 
 Commands use two mechanisms:
+
 - **nodegit** (libgit2 bindings) — branch inspection, status, commit metadata; accessed via `src/repo.ts` (repo discovery) and `src/branches.ts` (branch queries)
 - **execa / child_process** — actual git mutations (checkout, commit, push, rebase) via `src/exec.ts`
 
@@ -43,6 +45,10 @@ Commands use two mechanisms:
 ### Interactive UI
 
 `src/CustomListPrompt.ts` is a custom inquirer prompt used for branch selection. `src/status.ts` renders color-coded git status output using `src/ansi.ts` utilities.
+
+## Logging
+
+Use `log.error` from `src/utils.ts` for error output (not `console.error` directly).
 
 ## Code Style
 

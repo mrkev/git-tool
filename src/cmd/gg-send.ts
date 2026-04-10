@@ -35,7 +35,7 @@ const hasStagedChanges = await execa("git", ["diff", "--cached", "--quiet"]).the
   () => true,
 );
 if (!hasStagedChanges) {
-  console.error(chalk.red("Error:"), "Nothing staged to commit. Stage your changes first (git add).");
+  log.error("Nothing staged to commit. Stage your changes first (git add).");
   process.exit(1);
 }
 
@@ -47,7 +47,7 @@ if (fromMain) {
 
 const currBranch = await currentBranch();
 if (currBranch === branchname) {
-  console.error(chalk.red("Error:"), `Already on branch '${branchname}'. Choose a different branch name.`);
+  log.error(`Already on branch '${branchname}'. Choose a different branch name.`);
   process.exit(1);
 }
 
