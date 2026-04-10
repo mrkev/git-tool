@@ -1,25 +1,20 @@
-/**
- * `list` type prompt
- */
-
 import chalk from "chalk";
 import cliCursor from "cli-cursor";
-import figures from "figures";
 import { Answers, Question } from "inquirer";
 import Choice from "inquirer/lib/objects/choice";
 import Choices from "inquirer/lib/objects/choices";
 import Separator from "inquirer/lib/objects/separator.js";
 import Prompt from "inquirer/lib/prompts/base.js";
 import Paginator from "inquirer/lib/utils/paginator.js";
-import findIndex from "lodash/findIndex.js";
 import { Interface as ReadlineInterface } from "readline";
+import { exhaustive } from "../utils";
+import { deleteBranches, showOnGithub } from "./customListActions";
+import { listRender } from "./listRender";
 
 interface CustomListQuestion extends Question {
   loop?: boolean;
   pageSize?: number;
 }
-
-import { deleteBranches, showOnGithub } from "./customListActions";
 
 type ComponentMode = "list" | "command" | "prompt";
 type KeypressKey = {
@@ -83,7 +78,7 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
     if (typeof def === "number" && def >= 0 && def < this.opt.choices.realLength) {
       this.selected = def;
     } else if (!(typeof def === "number") && def != null) {
-      const index = findIndex(this.opt.choices.realChoices, ({ value }) => value === def);
+      const index = this.opt.choices.realChoices.findIndex((c) => "value" in c && c.value === def);
       this.selected = Math.max(index, 0);
     }
 
@@ -102,7 +97,11 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
     this.listMessage = "";
     switch (this.mode) {
       case "list":
-        this.onListKeypress(char, key);
+        this.onListKeypress(char, key).catch((err) => {
+          this.setMode("list");
+          this.listMessage = String(err);
+          this.render();
+        });
         break;
       case "command":
         this.onCommandKeypress(char, key);
@@ -249,12 +248,12 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
       // Movement
       case "down":
       case "j":
-        this.selected = incrementListIndex(this.selected, "down", this.opt);
+        this.selected = updateListIndex(this.selected, "down", this.opt);
         this.render();
         break;
       case "up":
       case "k":
-        this.selected = incrementListIndex(this.selected, "up", this.opt);
+        this.selected = updateListIndex(this.selected, "up", this.opt);
         this.render();
         break;
 
@@ -352,12 +351,21 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
     // Render question
     let message = this.getQuestion();
 
+    // render state
+    const renderState = {
+      pointer: this.selected,
+      marked: this.marked,
+      commandInput: this.commandInput,
+      mode: this.mode,
+    };
+
     if (this.firstRender) {
       message += chalk.dim("(Use vim navigation)");
       this.firstRender = false;
     }
 
-    // Render choices or answer depending on the state
+    // Render choices or answer depending on the status:
+    // "pending" | "idle" | "loading" | "answered" | "done"
     if (this.status === "answered") {
       message += chalk.cyan(this.opt.choices.getChoice(this.selected).short);
       this.screen.render(message, "");
@@ -365,7 +373,7 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
     }
 
     // Render list
-    const choicesStr = this.listRender(this.opt.choices, this.selected, this.marked);
+    const choicesStr = listRender(this.opt.choices, renderState);
     const selectedChoice = this.opt.choices.getChoice(this.selected);
     const indexPosition = this.opt.choices.indexOf(selectedChoice as Choice | Separator);
     const realIndexPosition =
@@ -403,51 +411,6 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
     this.screen.render(message, "");
   }
 
-  listRender(choices: Choices, pointer: number, marked: Set<number>): string {
-    let output = "";
-    let separatorOffset = 0;
-
-    const filter = this.commandInput[0] === "/" ? this.commandInput.substring(1) : "";
-
-    choices
-      .filter((choice: Choice | Separator): choice is Choice | Separator => {
-        if (filter === "") {
-          return true;
-        }
-        return !(choice instanceof Separator) && choice.short.indexOf(filter) > -1;
-      })
-      .forEach((choice, i) => {
-        if (choice.type === "separator") {
-          separatorOffset++;
-          output += "  " + choice + "\n";
-          return;
-        }
-
-        if (choice.disabled) {
-          separatorOffset++;
-          output += "  - " + choice.name;
-          output += " (" + (typeof choice.disabled === "string" ? choice.disabled : "Disabled") + ")";
-          output += "\n";
-          return;
-        }
-
-        const isSelected = i - separatorOffset === pointer;
-        let line = (isSelected ? figures.pointer + " " : "  ") + choice.name;
-        if (isSelected) {
-          const listDisabled = this.mode !== "list";
-          line = listDisabled ? chalk.grey(line) : chalk.cyan(line);
-        }
-
-        if (marked.has(i)) {
-          line = chalk.inverse(line);
-        }
-
-        output += line + " \n";
-      });
-
-    return output.replace(/\n$/, "");
-  }
-
   /**
    * When user press `enter` key
    */
@@ -469,7 +432,7 @@ export default class CustomListPrompt extends Prompt<CustomListQuestion> {
   }
 }
 
-function incrementListIndex(current: number, dir: "up" | "down", opt: { choices: Choices; loop?: boolean }) {
+function updateListIndex(current: number, dir: "up" | "down", opt: { choices: Choices; loop?: boolean }) {
   const len = opt.choices.realLength;
   const shouldLoop = opt.loop === undefined ? true : opt.loop;
   if (dir === "up") {
@@ -484,5 +447,5 @@ function incrementListIndex(current: number, dir: "up" | "down", opt: { choices:
     }
     return shouldLoop ? 0 : current;
   }
-  throw new Error("dir must be up or down");
+  exhaustive(dir);
 }

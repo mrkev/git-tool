@@ -1,4 +1,4 @@
-import { execAsync } from "./exec";
+import { execAsync } from "../exec";
 import nodegit from "nodegit";
 
 export async function showOnGithub(prs: Array<nodegit.Reference>) {

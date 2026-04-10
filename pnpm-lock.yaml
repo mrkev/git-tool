@@ -29,9 +29,6 @@ importers:
       javascript-time-ago:
         specifier: ^2.6.4
         version: 2.6.4
-      lodash:
-        specifier: ^4.18.1
-        version: 4.18.1
       nodegit:
         specifier: ^0.28.0-alpha.36
         version: 0.28.0-alpha.36(encoding@0.1.13)
@@ -51,9 +48,6 @@ importers:
       '@types/javascript-time-ago':
         specifier: ^2.5.0
         version: 2.5.0
-      '@types/lodash':
-        specifier: ^4.17.24
-        version: 4.17.24
       '@types/node':
         specifier: 22.19.17
         version: 22.19.17
@@ -352,9 +346,6 @@ packages:
   '@types/javascript-time-ago@2.5.0':
     resolution: {integrity: sha512-c0GQ02qkkZx138VphjPqU4+PkVSNkWvQcpE3Yy03S6NpWlT9XTSXPUbJ1qv4KV0/eW7wSEAoU87e2YHz7ndHrA==}
     deprecated: This is a stub types definition. javascript-time-ago provides its own type definitions, so you do not need this installed.
-
-  '@types/lodash@4.17.24':
-    resolution: {integrity: sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ==}
 
   '@types/node@22.19.17':
     resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
@@ -1468,8 +1459,6 @@ snapshots:
   '@types/javascript-time-ago@2.5.0':
     dependencies:
       javascript-time-ago: 2.6.4
-
-  '@types/lodash@4.17.24': {}
 
   '@types/node@22.19.17':
     dependencies:

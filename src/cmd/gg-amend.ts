@@ -2,7 +2,7 @@
 
 import { Command } from "commander";
 import { spawnStep } from "../exec";
-import { isRebasing } from "../utils";
+import { isRebasing } from "../isRebasing";
 
 const program = new Command();
 

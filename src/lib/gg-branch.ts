@@ -7,7 +7,7 @@ import nodegit from "nodegit";
 import { EOL } from "os";
 import { stripAnsi } from "../ansi";
 import { localBranches } from "../branches";
-import CustomListPrompt from "../CustomListPrompt";
+import CustomListPrompt from "../ui/CustomListPrompt";
 import { RefDeps } from "../RefDeps";
 import { getRepo } from "../repo";
 import { getStatusText } from "../status";
