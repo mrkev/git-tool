@@ -1,24 +1,20 @@
-import { Repository } from "nodegit";
-import { oidToRefMap, leastCommonAncestor, commitsBetween, refToOidMap, getTrunkRef } from "./branches";
+import { Reference, Repository } from "nodegit";
+import { oidToRefMap, leastCommonAncestor, commitsBetween, getTrunkRef } from "./branches";
 
 export class RefDeps {
   repo: Repository;
   private _oidToRefs: Promise<Awaited<ReturnType<typeof oidToRefMap>>> | null = null;
-  private _refToOid: Promise<Awaited<ReturnType<typeof refToOidMap>>> | null = null;
   private _trunkRef: Promise<Awaited<ReturnType<typeof getTrunkRef>>> | null = null;
+  private refs: Reference[] | undefined;
 
-  constructor(repo: Repository) {
+  constructor(repo: Repository, refs?: Reference[]) {
     this.repo = repo;
+    this.refs = refs;
   }
 
   private getOidToRefs() {
-    if (!this._oidToRefs) this._oidToRefs = oidToRefMap(this.repo);
+    if (!this._oidToRefs) this._oidToRefs = oidToRefMap(this.repo, this.refs);
     return this._oidToRefs;
-  }
-
-  private getRefToOid() {
-    if (!this._refToOid) this._refToOid = refToOidMap(this.repo);
-    return this._refToOid;
   }
 
   private getTrunk() {
@@ -27,7 +23,7 @@ export class RefDeps {
   }
 
   async parentForBranch(branchName: string): Promise<{ hash: string; branchName: string | null }> {
-    const [oidToRefs, , trunkRef] = await Promise.all([this.getOidToRefs(), this.getRefToOid(), this.getTrunk()]);
+    const [oidToRefs, trunkRef] = await Promise.all([this.getOidToRefs(), this.getTrunk()]);
 
     const TRUNK = trunkRef.shorthand();
     const trunkOid = trunkRef.target().tostrS();
@@ -39,12 +35,12 @@ export class RefDeps {
       return { hash: trunkOid, branchName: TRUNK };
     }
 
-    const ancestorWithTrunkOid = await leastCommonAncestor(TRUNK, branchName);
+    const ancestorWithTrunkOid = await leastCommonAncestor(this.repo, TRUNK, branchName);
 
     // Branch is rebased on top of trunk. If no commits in between are branches,
     // the parent is trunk.
     if (ancestorWithTrunkOid === trunkOid) {
-      const commits = await commitsBetween(branchName, TRUNK);
+      const commits = await commitsBetween(this.repo, branchName, TRUNK);
 
       // start at i=len-2 to skip the tip commit: the ref we're checking
       // i = 0 is TRUNK, so worst case we'll end on TRUNK and return that

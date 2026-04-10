@@ -1,36 +1,27 @@
-import { Reference, Repository } from "nodegit";
-import { execAsync } from "./exec";
+import nodegit from "nodegit";
+const { Merge, Revparse, Revwalk } = nodegit;
+type Reference = nodegit.Reference;
+type Repository = nodegit.Repository;
 
-export async function localBranches(repo: Repository): Promise<Reference[]> {
-  const refs = await repo.getReferences();
+export async function localBranches(repo: Repository, refs?: Reference[]): Promise<Reference[]> {
+  const allRefs = refs ?? (await repo.getReferences());
   // isBranch returns 1 when git reference lives in the refs/heads
   // therefore, local branches only
-  const branches = refs.filter((ref) => ref.isBranch() == 1);
+  const branches = allRefs.filter((ref) => ref.isBranch() == 1);
   return branches;
 }
 
 // commit -> branch
-export async function oidToRefMap(repo: Repository): Promise<Map<string, Reference[]>> {
-  const refs = await repo.getReferences();
+export async function oidToRefMap(repo: Repository, refs?: Reference[]): Promise<Map<string, Reference[]>> {
+  const allRefs = refs ?? (await repo.getReferences());
   const result = new Map();
-  for (const ref of refs) {
+  for (const ref of allRefs) {
     const oid = ref.target().tostrS();
     if (result.has(oid)) {
       result.get(oid).push(ref);
     } else {
       result.set(oid, [ref]);
     }
-  }
-  return result;
-}
-
-// branch -> commit
-export async function refToOidMap(repo: Repository): Promise<Map<string, Reference[]>> {
-  const refs = await repo.getReferences();
-  const result = new Map();
-  for (const ref of refs) {
-    const oid = ref.target().tostrS();
-    result.set(ref, oid);
   }
   return result;
 }
@@ -42,29 +33,29 @@ export async function getTrunkRef(repo: Repository): Promise<Reference> {
     .catch(() => repo.getReference("master"));
 }
 
-export async function commitsBetween(tip: string, base: string) {
-  const [stdout] = await execAsync(`git rev-list --ancestry-path ${base}..${tip}`);
+export async function commitsBetween(repo: Repository, tip: string, base: string) {
+  const tipObj = await Revparse.single(repo, tip);
+  const baseObj = await Revparse.single(repo, base);
 
-  // If branch returns hash, if hash returns hash
-  const [baseHash] = await execAsync(`git rev-parse ${base}`);
+  const walk = Revwalk.create(repo);
+  walk.sorting(Revwalk.SORT.TOPOLOGICAL | Revwalk.SORT.REVERSE);
+  walk.push(tipObj.id());
+  walk.hide(baseObj.id());
 
-  // Result includes (base..tip] (ie, doesn't include base) and is
-  // in reverse chronological order. Let's address these two aspects.
-  const result = stdout.split("\n").filter((s) => s.trim() !== "");
-  result.push(baseHash.trim());
-  result.reverse();
-
-  // result is [base, ..., tip]
+  const commits = await walk.commitWalk(1000);
+  // result is [base, ..., tip] — walk excludes base, so prepend it
+  const result = [baseObj.id().tostrS(), ...commits.map((entry: any) => entry.oid ? entry.oid.tostrS() : entry.id().tostrS())];
   return result;
 }
 
-export async function commonAncestorExists(possibleAncestor: string, commit: string) {
-  // TODO: status code 0 is yes, 1 is no iirc. get status code!
-  const [stdout, stderr] = await execAsync(`git merge-base --is-ancestor ${possibleAncestor} ${commit}`);
+export async function commonAncestorExists(repo: Repository, possibleAncestor: string, commit: string) {
+  return await nodegit.Graph.descendantOf(repo, (await Revparse.single(repo, commit)).id(), (await Revparse.single(repo, possibleAncestor)).id());
 }
 
 // returns a hash
-export async function leastCommonAncestor(hash1: string, hash2: string) {
-  const [stdout, stderr] = await execAsync(`git merge-base ${hash1} ${hash2}`);
-  return stdout.trim();
+export async function leastCommonAncestor(repo: Repository, hash1: string, hash2: string) {
+  const oid1 = (await Revparse.single(repo, hash1)).id();
+  const oid2 = (await Revparse.single(repo, hash2)).id();
+  const resultOid = await Merge.base(repo, oid1, oid2);
+  return resultOid.tostrS();
 }

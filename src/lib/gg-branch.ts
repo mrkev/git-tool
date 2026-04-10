@@ -25,13 +25,17 @@ export async function ggBranch(branch: string | null) {
 
   // Show list
   if (branch == null) {
-    const statusText = await getStatusText(repo);
+    const refs = await repo.getReferences();
+
+    // Fetch status and branch data in parallel
+    const [statusText, branchData] = await Promise.all([getStatusText(repo), getBranchListData(repo, refs)]);
+
     if (statusText.length) {
       console.log(chalk.dim("\nChanges not staged for commit:"));
       console.log(statusText.map((text) => `    ${text}`).join("\n"));
     }
 
-    await showBranchList(repo);
+    await showBranchPrompt(repo, branchData);
     return;
   }
 
@@ -73,32 +77,53 @@ export async function ggBranch(branch: string | null) {
   });
 }
 
+interface BranchResult {
+  sha: string;
+  date: Date;
+  shorthand: string;
+  message: string;
+  isHead: boolean;
+  parentBranch: string | null;
+  parentHash: string;
+  branch: nodegit.Reference;
+}
+
+export async function getBranchListData(repo: nodegit.Repository, refs: nodegit.Reference[]): Promise<BranchResult[]> {
+  const locals = localBranches(repo, refs);
+  const refdeps = new RefDeps(repo, refs);
+
+  // localBranches is synchronous filtering when refs are pre-fetched
+  const localsList = await locals;
+
+  const results = await Promise.all(
+    localsList.map(async (branch) => {
+      const oid = branch.target().tostrS();
+      const commit = await nodegit.Commit.lookup(repo, oid);
+      const parent = await refdeps.parentForBranch(branch.shorthand());
+
+      return {
+        sha: oid,
+        date: commit.date(),
+        shorthand: branch.shorthand(),
+        message: commit.message().trim().split(EOL)[0],
+        isHead: branch.isHead(),
+        parentBranch: parent.branchName,
+        parentHash: parent.hash,
+        branch,
+      };
+    }),
+  );
+
+  return results.sort(({ date: date1 }, { date: date2 }) => date2.valueOf() - date1.valueOf());
+}
+
 export async function showBranchList(repo: nodegit.Repository): Promise<void> {
-  const locals = await localBranches(repo);
+  const refs = await repo.getReferences();
+  const results = await getBranchListData(repo, refs);
+  await showBranchPrompt(repo, results);
+}
 
-  const refdeps = new RefDeps(repo);
-
-  const results = (
-    await Promise.all(
-      locals.map(async (branch) => {
-        const oid = branch.target().tostrS();
-        const commit = await nodegit.Commit.lookup(repo, oid);
-        const parent = await refdeps.parentForBranch(branch.shorthand());
-
-        return {
-          sha: oid,
-          date: commit.date(),
-          shorthand: branch.shorthand(),
-          message: commit.message().trim().split(EOL)[0],
-          isHead: branch.isHead(),
-          parentBranch: parent.branchName,
-          parentHash: parent.hash,
-          branch,
-        };
-      }),
-    )
-  ).sort(({ date: date1 }, { date: date2 }) => date2.valueOf() - date1.valueOf());
-
+async function showBranchPrompt(repo: nodegit.Repository, results: BranchResult[]): Promise<void> {
   let longestTimeLen = 0;
   let headIndex = 0;
   for (let i = 0; i < results.length; i++) {
@@ -140,9 +165,6 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
     };
   });
 
-  // console.log(choices);
-  // process.exit(0);
-
   const prompt = inquirer.prompt([
     {
       type: "custom-list",
@@ -163,11 +185,4 @@ export async function showBranchList(repo: nodegit.Repository): Promise<void> {
       console.error(e);
     }
   });
-
-  // process.stdin.on("keypress", function (x) {
-  //   if (x === "q") {
-  //     (prompt.ui as any).close();
-  //     console.log("\nCancelled by the user.");
-  //   }
-  // });
 }
