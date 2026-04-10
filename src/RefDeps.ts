@@ -3,19 +3,32 @@ import { oidToRefMap, leastCommonAncestor, commitsBetween, refToOidMap, getTrunk
 
 export class RefDeps {
   repo: Repository;
+  private _oidToRefs: Promise<Awaited<ReturnType<typeof oidToRefMap>>> | null = null;
+  private _refToOid: Promise<Awaited<ReturnType<typeof refToOidMap>>> | null = null;
+  private _trunkRef: Promise<Awaited<ReturnType<typeof getTrunkRef>>> | null = null;
+
   constructor(repo: Repository) {
     this.repo = repo;
   }
 
+  private getOidToRefs() {
+    if (!this._oidToRefs) this._oidToRefs = oidToRefMap(this.repo);
+    return this._oidToRefs;
+  }
+
+  private getRefToOid() {
+    if (!this._refToOid) this._refToOid = refToOidMap(this.repo);
+    return this._refToOid;
+  }
+
+  private getTrunk() {
+    if (!this._trunkRef) this._trunkRef = getTrunkRef(this.repo);
+    return this._trunkRef;
+  }
+
   async parentForBranch(branchName: string): Promise<{ hash: string; branchName: string | null }> {
-    const repo = this.repo;
-    const oidToRefs = await oidToRefMap(this.repo);
-    const refToOid = await refToOidMap(this.repo);
+    const [oidToRefs, , trunkRef] = await Promise.all([this.getOidToRefs(), this.getRefToOid(), this.getTrunk()]);
 
-    const headRef = await this.repo.head();
-    const head = headRef.shorthand();
-
-    const trunkRef = await getTrunkRef(repo);
     const TRUNK = trunkRef.shorthand();
     const trunkOid = trunkRef.target().tostrS();
 
@@ -59,7 +72,7 @@ export class RefDeps {
     return { hash: ancestorWithTrunkOid, branchName: null };
   }
 
-  async childrenForDep(ref: string): Promise<Array<string>> {
+  async childrenForDep(_ref: string): Promise<Array<string>> {
     return [];
   }
 }
