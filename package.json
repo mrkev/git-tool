@@ -25,12 +25,12 @@
   "dependencies": {
     "chalk": "^5.6.2",
     "cli-cursor": "^5.0.0",
-    "commander": "^13.1.0",
+    "commander": "^14.0.3",
     "execa": "^9.6.1",
     "figures": "^6.1.0",
     "inquirer": "^9.3.8",
     "javascript-time-ago": "^2.6.4",
-    "lodash": "^4.17.23",
+    "lodash": "^4.18.1",
     "nodegit": "^0.28.0-alpha.36",
     "omelette": "^0.4.17"
   },
@@ -40,12 +40,12 @@
     "@types/inquirer": "^9.0.9",
     "@types/javascript-time-ago": "^2.5.0",
     "@types/lodash": "^4.17.24",
-    "@types/node": "22.19.15",
+    "@types/node": "22.19.17",
     "@types/nodegit": "^0.28.11",
     "@types/omelette": "^0.4.5",
-    "glob": "^11.1.0",
-    "prettier": "^3.8.1",
-    "rollup": "^4.60.0",
+    "glob": "^13.0.6",
+    "prettier": "^3.8.2",
+    "rollup": "^4.60.1",
     "rollup-plugin-natives": "^0.7.8",
     "rollup-plugin-preserve-shebangs": "^0.2.0",
     "ts-node": "^10.9.2",
@@ -55,5 +55,5 @@
     "printWidth": 120,
     "trailingComma": "all"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.33.0"
 }
