@@ -23,12 +23,12 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@inquirer/confirm": "^6.0.11",
+    "@inquirer/core": "^11.1.8",
     "chalk": "^5.6.2",
-    "cli-cursor": "^5.0.0",
     "commander": "^14.0.3",
     "execa": "^9.6.1",
     "figures": "^6.1.0",
-    "inquirer": "^9.3.8",
     "javascript-time-ago": "^2.6.4",
     "nodegit": "^0.28.0-alpha.36",
     "omelette": "^0.4.17"
@@ -36,7 +36,6 @@
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@types/inquirer": "^9.0.9",
     "@types/javascript-time-ago": "^2.5.0",
     "@types/node": "22.19.17",
     "@types/nodegit": "^0.28.11",

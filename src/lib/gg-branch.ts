@@ -1,19 +1,18 @@
+import confirm from "@inquirer/confirm";
 import chalk from "chalk";
 import { exec } from "child_process";
-import inquirer from "inquirer";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en";
 import nodegit from "nodegit";
 import { EOL } from "os";
 import { stripAnsi } from "../ansi";
 import { localBranches } from "../branches";
-import CustomListPrompt from "../ui/CustomListPrompt";
+import customList from "../ui/CustomListPrompt";
+import { deleteBranches, showOnGithub } from "../ui/customListActions";
 import { RefDeps } from "../RefDeps";
 import { getRepo } from "../repo";
 import { getStatusText } from "../status";
 import { Profiler } from "./Profiler";
-
-inquirer.registerPrompt("custom-list", CustomListPrompt);
 
 TimeAgo.addDefaultLocale(en);
 const timeAgo = new TimeAgo("en-US");
@@ -50,14 +49,10 @@ export async function ggBranch(branch: string | null, doProfile: boolean = false
   const branches = (await localBranches(repo)).map((branch) => branch.shorthand());
 
   if (branches.indexOf(branch) === -1) {
-    const { create } = await inquirer.prompt([
-      {
-        type: "confirm",
-        name: "create",
-        message: `No branch named '${branch}'. Create one?`,
-        default: false,
-      },
-    ]);
+    const create = await confirm({
+      message: `No branch named '${branch}'. Create one?`,
+      default: false,
+    });
 
     if (create) {
       exec(`git checkout -b ${branch}`, (error, stdout, stderr) => {
@@ -172,24 +167,19 @@ async function showBranchPrompt(repo: nodegit.Repository, results: BranchResult[
     };
   });
 
-  const prompt = inquirer.prompt([
-    {
-      type: "custom-list",
-      name: "branch",
-      message: "on branch:",
-      choices,
-      default: choices[headIndex].value,
-      pageSize: 20,
-      loop: false,
-    },
-  ]);
-
-  prompt.then(async function (answers) {
-    const branch: nodegit.Reference = answers.branch;
-    try {
-      await repo.checkoutBranch(branch);
-    } catch (e) {
-      console.error(e);
-    }
+  const branch = await customList({
+    message: "on branch:",
+    choices,
+    default: choices[headIndex].value,
+    pageSize: 20,
+    loop: false,
+    onDelete: deleteBranches,
+    onOpen: showOnGithub,
   });
+
+  try {
+    await repo.checkoutBranch(branch);
+  } catch (e) {
+    console.error(e);
+  }
 }

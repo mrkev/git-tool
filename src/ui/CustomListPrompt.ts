@@ -1,451 +1,257 @@
-import chalk from "chalk";
-import cliCursor from "cli-cursor";
-import { Answers, Question } from "inquirer";
-import Choice from "inquirer/lib/objects/choice";
-import Choices from "inquirer/lib/objects/choices";
-import Separator from "inquirer/lib/objects/separator.js";
-import Prompt from "inquirer/lib/prompts/base.js";
-import Paginator from "inquirer/lib/utils/paginator.js";
-import { Interface as ReadlineInterface } from "readline";
-import { exhaustive } from "../utils";
-import { deleteBranches, showOnGithub } from "./customListActions";
-import { listRender } from "./listRender";
+/**
+ * Custom list prompt built on @inquirer/core
+ */
 
-interface CustomListQuestion extends Question {
-  loop?: boolean;
-  pageSize?: number;
-}
+import {
+  createPrompt,
+  makeTheme,
+  Separator,
+  useKeypress,
+  useMemo,
+  usePagination,
+  usePrefix,
+  useRef,
+  useState,
+} from "@inquirer/core";
+import chalk from "chalk";
+import figures from "figures";
+
+const CURSOR_HIDE = "\x1B[?25l";
 
 type ComponentMode = "list" | "command" | "prompt";
-type KeypressKey = {
-  sequence: string;
+
+export type CustomChoice<Value> = {
+  value: Value;
   name: string;
-  ctrl: boolean;
-  meta: boolean;
-  shift: boolean;
-  code: string;
+  short: string;
+  disabled?: boolean | string;
 };
 
-export default class CustomListPrompt extends Prompt<CustomListQuestion> {
-  /**
-   * Resolves the value of the prompt.
-   */
-  protected done: ((value: any) => void) | null = null;
+export type CustomListConfig<Value> = {
+  message: string;
+  choices: ReadonlyArray<CustomChoice<Value> | Separator>;
+  default?: Value;
+  pageSize?: number;
+  loop?: boolean;
+  onDelete?: (values: Value[]) => Promise<void>;
+  onOpen?: (values: Value[]) => Promise<void>;
+};
 
-  /**
-   * Gets or sets a value indicating whether the prompt has been rendered the first time.
-   */
-  protected firstRender: boolean;
+function isSelectable<Value>(item: CustomChoice<Value> | Separator): item is CustomChoice<Value> {
+  return !Separator.isSeparator(item) && !item.disabled;
+}
 
-  /**
-   * The index of the selected choice.
-   */
-  protected selected: number;
+export default createPrompt(<Value>(config: CustomListConfig<Value>, done: (value: Value) => void) => {
+  const { loop = true, pageSize = 7 } = config;
 
-  private readonly defaultSelected: number;
+  const items = useMemo(() => [...config.choices], [config.choices]);
 
-  /** Lines marked for a future operation */
-  private marked: Set<number> = new Set();
+  const defaultIndex = useMemo(() => {
+    if (config.default == null) return 0;
+    const idx = items.findIndex((item) => isSelectable(item) && item.value === config.default);
+    return Math.max(idx, 0);
+  }, [config.default, items]);
 
-  /**
-   * Gets or sets an object for paginating the content.
-   */
-  protected paginator: Paginator;
+  const [selected, setSelected] = useState(defaultIndex);
+  const [marked, setMarked] = useState<Set<number>>(new Set());
+  const [mode, setMode] = useState<ComponentMode>("list");
+  const [commandInput, setCommandInput] = useState("");
+  const [listMessage, setListMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "done">("idle");
+  // Prompt mode (inline y/n confirmation)
+  const [promptQuestion, setPromptQuestion] = useState("");
+  const [promptInput, setPromptInput] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Value[] | null>(null);
 
-  protected mode: ComponentMode = "list";
+  const firstRender = useRef(true);
+  const prefix = usePrefix({ theme: makeTheme() });
 
-  // message that renders until next action on list
-  private listMessage: string = "";
-
-  // When on prompt mode, what gets called when done
-  private promptCallback: ((answer: boolean) => void) | null = null;
-  private promptQuestion: string = "";
-  private promptInput: string = "";
-
-  constructor(questions: CustomListQuestion[], rl: ReadlineInterface, answers: Answers) {
-    super(questions, rl, answers);
-
-    if (!this.opt.choices) {
-      this.throwParamError("choices");
-    }
-
-    this.firstRender = true;
-    this.selected = 0;
-
-    const def = this.opt.default;
-
-    // If def is a Number, then use as index. Otherwise, check for value.
-    if (typeof def === "number" && def >= 0 && def < this.opt.choices.realLength) {
-      this.selected = def;
-    } else if (!(typeof def === "number") && def != null) {
-      const index = this.opt.choices.realChoices.findIndex((c) => "value" in c && c.value === def);
-      this.selected = Math.max(index, 0);
-    }
-
-    this.defaultSelected = this.selected;
-
-    // Make sure no default is set (so it won't be printed)
-    this.opt.default = null;
-
-    const shouldLoop = this.opt.loop === undefined ? true : this.opt.loop;
-    this.paginator = new Paginator(this.screen, {
-      isInfinite: shouldLoop,
-    });
-  }
-
-  onKeypress = (char: string, key: KeypressKey): void => {
-    this.listMessage = "";
-    switch (this.mode) {
-      case "list":
-        this.onListKeypress(char, key).catch((err) => {
-          this.setMode("list");
-          this.listMessage = String(err);
-          this.render();
-        });
-        break;
-      case "command":
-        this.onCommandKeypress(char, key);
-        break;
-      case "prompt":
-        this.onPromptKeypress(char, key);
-        break;
-    }
+  // Helper: get values for marked items (or just the selected item)
+  const getSelectedValues = (): Value[] => {
+    const indices = marked.size > 0 ? [...marked] : [selected];
+    return indices
+      .map((i) => items[i])
+      .filter((item): item is CustomChoice<Value> => item != null && !Separator.isSeparator(item))
+      .map((item) => item.value);
   };
 
-  _register() {
-    process.stdin.on("keypress", this.onKeypress);
-  }
-
-  _unregister() {
-    process.stdin.off("keypress", this.onKeypress);
-  }
-
-  _run(cb: (value: any) => void): this {
-    this.done = cb;
-    this._register();
-    // Init the prompt
-    cliCursor.hide();
-    this.render();
-    return this;
-  }
-
-  commandInput: string = "";
-  executeCommand() {
-    switch (this.commandInput) {
-      case "q":
-        process.exit(0);
-        break;
-      case "m":
-        process.stderr.write(this.mode + "\n\n\n\n\n\n");
-        break;
-
-      case "del":
-      case "delete":
-      case "d":
-        break;
-
-      case "help":
-        process.stderr.write("commands: q (quit)qm (print mode)\n" + "immediates: ");
-        break;
-
-      case "pull":
-      // TODO: same as git checkout [selected branch]
-      //               git pull
-      case "delmerged":
-        // TODO: deletes all merged branches
-        break;
-    }
-    this.commandInput = "";
-  }
-
-  private setMode(mode: ComponentMode): void {
-    this.mode = mode;
+  useKeypress((key, rl) => {
     switch (mode) {
-      case "command":
-        cliCursor.show();
-        break;
-      case "list":
-        this.commandInput = "";
-        cliCursor.hide();
-        break;
-      case "prompt":
-        cliCursor.show();
-        break;
-    }
-    this.render();
-  }
+      case "list": {
+        rl.clearLine(0);
+        setListMessage("");
 
-  onPromptKeypress(char: string, key: KeypressKey): void {
-    switch (key.name) {
-      case "backspace":
-        // TODO: prompt or command input
-        if (this.commandInput.length === 0) {
-          break;
-        }
-        this.commandInput = this.commandInput.slice(0, -1);
-        this.render();
-
-        break;
-      case "escape":
-        this.setMode("list");
-        this.promptInput = "";
-        break;
-
-      case "return":
-        if (!this.promptCallback) {
-          throw new Error("No prompt callback");
-        }
-        const answer =
-          this.promptInput.toLowerCase() === "y" ? true : this.promptInput.toLowerCase() === "n" ? false : "invalid";
-
-        if (answer !== "invalid") {
-          this.promptInput = "";
-          this.promptCallback(answer);
-          return;
-        }
-
-        this.promptInput = "";
-        this.render();
-        break;
-
-      default:
-        if (char != null && key.name !== "return") {
-          this.promptInput += char;
-          this.render();
-        }
-    }
-  }
-
-  onCommandKeypress(char: string, key: KeypressKey): void {
-    switch (key.name) {
-      case "backspace":
-        if (this.commandInput.length === 0) {
-          break;
-        }
-
-        this.commandInput = this.commandInput.slice(0, -1);
-        this.render();
-
-        break;
-      case "escape":
-        this.setMode("list");
-        break;
-
-      case "return":
-        this.executeCommand();
-        break;
-
-      default:
-        if (char != null && key.name !== "return") {
-          this.commandInput += char;
-          this.render();
-        }
-    }
-  }
-
-  async onListKeypress(char: string, key: KeypressKey): Promise<void> {
-    switch (key.name) {
-      // Movement
-      case "down":
-      case "j":
-        this.selected = updateListIndex(this.selected, "down", this.opt);
-        this.render();
-        break;
-      case "up":
-      case "k":
-        this.selected = updateListIndex(this.selected, "up", this.opt);
-        this.render();
-        break;
-
-      // Select/mark a branch
-      case "s":
-        if (this.marked.has(this.selected)) {
-          this.marked.delete(this.selected);
-        } else {
-          this.marked.add(this.selected);
-        }
-        this.render();
-        break;
-
-      // Space "resets the camera" and selects the default branch
-      case "space":
-        this.selected = this.defaultSelected;
-        this.render();
-        break;
-
-      // [B]rowse the pr for the branch on github
-      case "o":
-        {
-          const indices = this.marked.size > 0 ? [...this.marked] : [this.selected];
-          const branches = indices.map((i: number) => {
-            const choice = this.opt.choices.getChoice(i).value;
-            return choice;
-          });
-
-          await showOnGithub(branches);
-          console.log("shown!");
-          process.exit(0);
-        }
-        break;
-
-      // d deletes branches
-      case "d":
-        {
-          const indices = this.marked.size > 0 ? [...this.marked] : [this.selected];
-          const branches = indices.map((i: number) => {
-            const choice = this.opt.choices.getChoice(i).value;
-            return choice;
-          });
-
-          const confirmed = await this.confirmAsync(`delete ${branches.length} branches?`);
-
-          if (confirmed) {
-            await deleteBranches(branches);
-            this.listMessage = `deleted ${branches.length} branches`;
-          } else {
-            this.listMessage = `didn't delete ${branches.length} branches`;
+        switch (key.name) {
+          case "down":
+          case "j": {
+            let next = selected;
+            do {
+              next = loop ? (next + 1) % items.length : Math.min(items.length - 1, next + 1);
+            } while (Separator.isSeparator(items[next]!) && next !== selected);
+            setSelected(next);
+            break;
           }
-          this.setMode("list");
-          this.render();
+          case "up":
+          case "k": {
+            let next = selected;
+            do {
+              next = loop ? (next - 1 + items.length) % items.length : Math.max(0, next - 1);
+            } while (Separator.isSeparator(items[next]!) && next !== selected);
+            setSelected(next);
+            break;
+          }
+          case "s": {
+            const newMarked = new Set(marked);
+            if (newMarked.has(selected)) {
+              newMarked.delete(selected);
+            } else {
+              newMarked.add(selected);
+            }
+            setMarked(newMarked);
+            break;
+          }
+          case "space":
+            setSelected(defaultIndex);
+            break;
+          case "o": {
+            if (!config.onOpen) break;
+            const values = getSelectedValues();
+            config
+              .onOpen(values)
+              .then(() => process.exit(0))
+              .catch((err: unknown) => setListMessage(String(err)));
+            break;
+          }
+          case "d": {
+            if (!config.onDelete) break;
+            const values = getSelectedValues();
+            setPendingDelete(values);
+            setPromptQuestion(`delete ${values.length} branches?`);
+            setPromptInput("");
+            setMode("prompt");
+            break;
+          }
+          case "q":
+            return void process.exit(0);
+          case "escape":
+            setMode("command");
+            setCommandInput("");
+            break;
+          case "return": {
+            const item = items[selected];
+            if (item && isSelectable(item)) {
+              setStatus("done");
+              done(item.value);
+            }
+            break;
+          }
         }
         break;
+      }
 
-      // Q quits immediately
-      case "q":
-        process.exit(0);
-        break;
-
-      // Esc enters command mode
-      case "escape":
-        this.setMode("command");
-        break;
-
-      case "return":
-        const value = this.getCurrentValue();
-        // I think I copied this correctly?
-        const filtered = this.opt.filter ? this.opt.filter(value, this.answers) : value;
-        // .catch(
-        //   (err: any) => err
-        // );
-        this.onSubmit(filtered);
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  private async confirmAsync(question: string): Promise<boolean> {
-    return new Promise((res) => {
-      this.setMode("prompt");
-      this.promptCallback = res;
-      this.promptQuestion = question;
-      this.render();
-    });
-  }
-
-  /**
-   * Render the prompt to screen
-   */
-  render(): void {
-    // Render question
-    let message = this.getQuestion();
-
-    // render state
-    const renderState = {
-      pointer: this.selected,
-      marked: this.marked,
-      commandInput: this.commandInput,
-      mode: this.mode,
-    };
-
-    if (this.firstRender) {
-      message += chalk.dim("(Use vim navigation)");
-      this.firstRender = false;
-    }
-
-    // Render choices or answer depending on the status:
-    // "pending" | "idle" | "loading" | "answered" | "done"
-    if (this.status === "answered") {
-      message += chalk.cyan(this.opt.choices.getChoice(this.selected).short);
-      this.screen.render(message, "");
-      return;
-    }
-
-    // Render list
-    const choicesStr = listRender(this.opt.choices, renderState);
-    const selectedChoice = this.opt.choices.getChoice(this.selected);
-    const indexPosition = this.opt.choices.indexOf(selectedChoice as Choice | Separator);
-    const realIndexPosition =
-      this.opt.choices.choices.reduce((acc, value, i) => {
-        // Dont count lines past the choice we are looking at
-        if (i > indexPosition) {
-          return acc;
+      case "command": {
+        if (key.name === "escape") {
+          rl.clearLine(0);
+          setMode("list");
+          setCommandInput("");
+        } else if (key.name === "return") {
+          if (rl.line.trim() === "q") process.exit(0);
+          rl.clearLine(0);
+          setCommandInput("");
+        } else {
+          setCommandInput(rl.line);
         }
-        // Strings and separators take up one line
-        if (typeof value === "string" || value.type === "separator") {
-          return acc + 1;
+        break;
+      }
+
+      case "prompt": {
+        if (key.name === "escape") {
+          rl.clearLine(0);
+          setMode("list");
+          setPromptInput("");
+          setPendingDelete(null);
+        } else if (key.name === "return") {
+          const answer = rl.line.trim().toLowerCase();
+          rl.clearLine(0);
+          if (answer === "y" && pendingDelete && config.onDelete) {
+            const count = pendingDelete.length;
+            config
+              .onDelete(pendingDelete)
+              .then(() => {
+                setListMessage(`deleted ${count} branches`);
+                setMode("list");
+              })
+              .catch((err: unknown) => {
+                setListMessage(String(err));
+                setMode("list");
+              });
+            setPendingDelete(null);
+          } else if (answer === "n") {
+            setListMessage(`didn't delete ${pendingDelete?.length ?? 0} branches`);
+            setPendingDelete(null);
+            setMode("list");
+          }
+          setPromptInput("");
+        } else {
+          setPromptInput(rl.line);
         }
-
-        const name = value.name;
-        // Non-strings take up one line
-        if (typeof name !== "string") {
-          return acc + 1;
-        }
-
-        // Calculate lines taken up by string
-        return acc + name.split("\n").length;
-      }, 0) - 1;
-    message += "\n" + this.paginator.paginate(choicesStr, realIndexPosition, this.opt.pageSize);
-
-    // Line for commands
-    if (this.mode === "list") {
-      message += "\n" + chalk.dim(this.listMessage);
-    } else if (this.mode === "command") {
-      // const dimMessage = "(q: quit, /: search)";
-      message += "\n:" + this.commandInput;
-    } else if (this.mode === "prompt") {
-      message += `\n${this.promptQuestion} (y/N):` + this.promptInput;
+        break;
+      }
     }
+  });
 
-    this.screen.render(message, "");
+  // === Render ===
+
+  const selectedItem = items[selected];
+  const selectedShort = selectedItem && !Separator.isSeparator(selectedItem) ? selectedItem.short : "";
+
+  // usePagination must be called unconditionally (hook ordering)
+  const page = usePagination({
+    items,
+    active: selected,
+    renderItem({ item, isActive, index }) {
+      if (Separator.isSeparator(item)) {
+        return `  ${item.separator}`;
+      }
+
+      if (item.disabled) {
+        return `  - ${item.name} (${typeof item.disabled === "string" ? item.disabled : "Disabled"})`;
+      }
+
+      let line = (isActive ? figures.pointer + " " : "  ") + item.name;
+      if (isActive) {
+        line = mode !== "list" ? chalk.grey(line) : chalk.cyan(line);
+      }
+      if (marked.has(index)) {
+        line = chalk.inverse(line);
+      }
+
+      return line;
+    },
+    pageSize,
+    loop,
+  });
+
+  if (status === "done") {
+    return `${prefix} ${chalk.bold(config.message)} ${chalk.cyan(selectedShort)}`;
   }
 
-  /**
-   * When user press `enter` key
-   */
-  onSubmit(value: any): void {
-    this.status = "answered";
-    // Rerender prompt
-    this.render();
-    this.screen.done();
-    cliCursor.show();
-    if (this.done == null) {
-      throw new Error("No final callback!");
-    } else {
-      this.done(value);
-    }
+  let header = `${prefix} ${chalk.bold(config.message)}`;
+  if (firstRender.current) {
+    header += " " + chalk.dim("(Use vim navigation)");
+    firstRender.current = false;
   }
 
-  getCurrentValue() {
-    return this.opt.choices.getChoice(this.selected).value;
+  let footer = "";
+  if (mode === "list") {
+    footer = chalk.dim(listMessage);
+  } else if (mode === "command") {
+    footer = ":" + commandInput;
+  } else if (mode === "prompt") {
+    footer = `${promptQuestion} (y/N):${promptInput}`;
   }
-}
 
-function updateListIndex(current: number, dir: "up" | "down", opt: { choices: Choices; loop?: boolean }) {
-  const len = opt.choices.realLength;
-  const shouldLoop = opt.loop === undefined ? true : opt.loop;
-  if (dir === "up") {
-    if (current > 0) {
-      return current - 1;
-    }
-    return shouldLoop ? len - 1 : current;
-  }
-  if (dir === "down") {
-    if (current < len - 1) {
-      return current + 1;
-    }
-    return shouldLoop ? 0 : current;
-  }
-  exhaustive(dir);
-}
+  return `${header}\n${page}\n${footer}${CURSOR_HIDE}`;
+});
+
+export { Separator } from "@inquirer/core";
